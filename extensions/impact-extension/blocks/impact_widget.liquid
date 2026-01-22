@@ -1,0 +1,46 @@
+{% assign treesCount = block.settings.trees_count | default: 1 %}
+
+<div class="afforestation-impact-widget">
+  <div class="impact-content">
+    <span class="impact-icon">🌳</span>
+    <span class="impact-text">
+      This purchase plants <strong>{{ treesCount }} tree{{ treesCount | pluralize: 's' }}</strong>!
+    </span>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Tree Impact Widget",
+  "target": "section",
+  "settings": [
+    { "type": "number", "id": "trees_count", "label": "Trees to plant", "default": 1 },
+    { "type": "color", "id": "text_color", "label": "Text Color", "default": "#2d5a27" }
+  ]
+}
+{% endschema %}
+
+<style>
+  .afforestation-impact-widget {
+    background: #f0f9f0;
+    border: 1px solid #d4edda;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+  }
+  .afforestation-impact-widget .impact-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: {{ block.settings.text_color }};
+  }
+  .afforestation-impact-widget .impact-icon {
+    font-size: 24px;
+  }
+  .afforestation-impact-widget .impact-text {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+</style>
