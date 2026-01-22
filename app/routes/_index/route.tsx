@@ -109,16 +109,18 @@ export default function App() {
       {/* Main content */}
       <div className={styles.content}>
         {/* Logo with entrance animation */}
-        <div className={styles.logoWrapper}>
-          <div className={styles.logoGlow} />
-          <div className={styles.logoContainer}>
-            <img 
-              src="/afforestation-logo.png" 
-              alt="Afforestation" 
-              className={styles.logoImage}
-            />
+        <div className={styles.logoSection}>
+          <div className={styles.logoWrapper}>
+            <div className={styles.logoGlow} />
+            <div className={styles.logoContainer}>
+              <img 
+                src="/afforestation-logo.png" 
+                alt="Afforestation" 
+                className={styles.logoImage}
+              />
+            </div>
+            <div className={styles.logoPulse} />
           </div>
-          <div className={styles.logoPulse} />
           <a href="https://afforestation.org" target="_blank" rel="noopener noreferrer" className={styles.brandName}>
             afforestation.org
           </a>
