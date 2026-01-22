@@ -1,105 +1,37 @@
 {% comment %}
   Afforestation Footer Badge
   Shows total impact and links to virtual forest
+  All visual settings are configurable in theme editor
 {% endcomment %}
 
-<div class="afforestation-footer-badge" id="afforestation-footer-{{ block.id }}" style="display: none;">
-  <div class="footer-badge-content" id="footer-content-{{ block.id }}">
-    <div class="footer-badge-icon" id="footer-icon-wrap-{{ block.id }}">
-      <span id="footer-icon-{{ block.id }}">🌳</span>
+<div class="afforestation-footer-badge {{ block.settings.layout }}" id="afforestation-footer-{{ block.id }}" style="
+  --footer-primary: {{ block.settings.primary_color }};
+  --footer-bg: {{ block.settings.background_color }};
+  --footer-border: {{ block.settings.primary_color }}33;
+">
+  <div class="footer-badge-content">
+    <div class="footer-badge-icon {% if block.settings.animate %}animate-bounce{% endif %}">
+      <span>{{ block.settings.icon }}</span>
     </div>
-    <div class="footer-badge-stats" id="footer-stats-{{ block.id }}">
+    <div class="footer-badge-stats">
       <div class="footer-stat">
         <span class="footer-stat-value" id="footer-trees-{{ block.id }}">0</span>
-        <span class="footer-stat-label" id="footer-label-{{ block.id }}">trees planted</span>
+        {% unless block.settings.style == 'minimal' %}
+        <span class="footer-stat-label">{{ block.settings.label }}</span>
+        {% endunless %}
       </div>
     </div>
-    <div class="footer-badge-brand" id="footer-brand-{{ block.id }}">
+    {% if block.settings.show_branding and block.settings.style == 'detailed' %}
+    <div class="footer-badge-brand">
       <span class="footer-brand">Afforestation</span>
     </div>
+    {% endif %}
   </div>
 </div>
 
 <script>
   (function() {
-    const blockId = '{{ block.id }}';
-    const badge = document.getElementById('afforestation-footer-' + blockId);
-    const content = document.getElementById('footer-content-' + blockId);
-    const iconWrap = document.getElementById('footer-icon-wrap-' + blockId);
-    const iconEl = document.getElementById('footer-icon-' + blockId);
-    const treesEl = document.getElementById('footer-trees-' + blockId);
-    const labelEl = document.getElementById('footer-label-' + blockId);
-    const statsEl = document.getElementById('footer-stats-' + blockId);
-    const brandEl = document.getElementById('footer-brand-' + blockId);
-    
-    async function loadData() {
-      try {
-        const response = await fetch('/apps/afforestation/impact');
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const data = await response.json();
-        const s = data.settings || {};
-        
-        // Check if footer is enabled
-        if (s.footerEnabled === false) {
-          badge.style.display = 'none';
-          return;
-        }
-        
-        // Show badge
-        badge.style.display = 'inline-flex';
-        
-        // Apply styling
-        badge.style.setProperty('--footer-primary', s.primaryColor || '#2d5a27');
-        badge.style.setProperty('--footer-bg', s.backgroundColor || '#f0fdf4');
-        badge.style.setProperty('--footer-border', s.borderColor || 'rgba(45, 90, 39, 0.2)');
-        
-        // Update icon
-        iconEl.textContent = s.treeEmoji || '🌳';
-        
-        // Apply style variations
-        if (s.footerStyle === 'minimal') {
-          badge.style.padding = '6px 12px';
-          labelEl.style.display = 'none';
-          brandEl.style.display = 'none';
-        } else if (s.footerStyle === 'detailed') {
-          iconEl.style.fontSize = '24px';
-          treesEl.style.fontSize = '18px';
-        } else {
-          // standard
-          iconEl.style.fontSize = '20px';
-        }
-        
-        // Apply layout
-        if (s.footerLayout === 'stacked') {
-          content.style.flexDirection = 'column';
-          content.style.gap = '4px';
-          statsEl.style.flexDirection = 'column';
-          statsEl.style.alignItems = 'center';
-        }
-        
-        // Animation
-        if (s.showFooterAnimation === false) {
-          iconWrap.style.animation = 'none';
-        }
-        
-        // Branding
-        if (s.showFooterBranding === false || s.footerStyle !== 'detailed') {
-          brandEl.style.display = 'none';
-        }
-        
-        // Update label
-        labelEl.textContent = s.footerMessage || 'trees planted';
-        
-        // Animate count
-        animateCount(treesEl, data.treesPlanted || 0);
-        
-      } catch (error) {
-        console.warn('Afforestation: Could not load data', error);
-        // Show default badge on error
-        badge.style.display = 'inline-flex';
-      }
-    }
+    const treesEl = document.getElementById('footer-trees-{{ block.id }}');
     
     function animateCount(element, target) {
       const duration = 1500;
@@ -121,6 +53,17 @@
       requestAnimationFrame(update);
     }
     
+    async function loadData() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        animateCount(treesEl, data.treesPlanted || 0);
+      } catch (error) {
+        treesEl.textContent = '0';
+      }
+    }
+    
     // Load when visible
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
@@ -129,7 +72,7 @@
       }
     }, { threshold: 0.1 });
     
-    observer.observe(badge);
+    observer.observe(document.getElementById('afforestation-footer-{{ block.id }}'));
   })();
 </script>
 
@@ -139,8 +82,75 @@
   "target": "section",
   "settings": [
     {
-      "type": "paragraph",
-      "content": "A compact badge showing your total trees planted. Perfect for the footer."
+      "type": "header",
+      "content": "Display"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label text",
+      "default": "trees planted",
+      "info": "Write in any language!"
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon/Emoji",
+      "default": "🌳"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Badge style",
+      "options": [
+        { "value": "minimal", "label": "Minimal - icon and count only" },
+        { "value": "standard", "label": "Standard - with label" },
+        { "value": "detailed", "label": "Detailed - with branding" }
+      ],
+      "default": "standard"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "horizontal", "label": "Horizontal" },
+        { "value": "stacked", "label": "Stacked" }
+      ],
+      "default": "horizontal"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate",
+      "label": "Animate icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_branding",
+      "label": "Show Afforestation branding",
+      "default": true,
+      "info": "Only visible in Detailed style"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#2d5a27"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#f0fdf4"
     }
   ]
 }
@@ -171,8 +181,16 @@
     gap: 12px;
   }
   
+  .afforestation-footer-badge.stacked .footer-badge-content {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
   .afforestation-footer-badge .footer-badge-icon {
     font-size: 24px;
+  }
+  
+  .afforestation-footer-badge .footer-badge-icon.animate-bounce {
     animation: gentle-bounce 2s ease-in-out infinite;
   }
   
@@ -185,6 +203,10 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+  }
+  
+  .afforestation-footer-badge.stacked .footer-badge-stats {
+    align-items: center;
   }
   
   .afforestation-footer-badge .footer-stat {

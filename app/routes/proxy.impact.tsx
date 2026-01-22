@@ -3,62 +3,15 @@ import { json } from "@remix-run/node"
 import { authenticate } from "../shopify.server"
 import prisma from "../db.server"
 
-const FOREST_THEMES: Record<string, string[]> = {
-  mixed: ["🌳", "🌲", "🌴", "🌿"],
-  pine: ["🌲", "🎄", "🌲", "🎋"],
-  deciduous: ["🌳", "🍂", "🍁", "🌳"],
-  tropical: ["🌴", "🌺", "🌸", "🌴"],
-}
-
 /**
- * Parse message variables and replace with actual values
- * Available variables: {count}, {s}, {kg}, {percent}, {amount}, {total}
- */
-function parseMessageVariables(message: string, data: {
-  count?: number
-  kg?: number
-  percent?: number
-  amount?: number
-  total?: number
-}): string {
-  let parsed = message
-  
-  // Replace {count} with tree count
-  if (data.count !== undefined) {
-    parsed = parsed.replace(/{count}/g, data.count.toString())
-  }
-  
-  // Replace {s} with plural suffix
-  if (data.count !== undefined) {
-    parsed = parsed.replace(/{s}/g, data.count === 1 ? '' : 's')
-  }
-  
-  // Replace {kg} with CO2 kilograms
-  if (data.kg !== undefined) {
-    parsed = parsed.replace(/{kg}/g, data.kg.toLocaleString())
-  }
-  
-  // Replace {percent} with percentage
-  if (data.percent !== undefined) {
-    parsed = parsed.replace(/{percent}/g, data.percent.toString())
-  }
-  
-  // Replace {amount} with currency amount
-  if (data.amount !== undefined) {
-    parsed = parsed.replace(/{amount}/g, data.amount.toLocaleString())
-  }
-  
-  // Replace {total} with total trees planted
-  if (data.total !== undefined) {
-    parsed = parsed.replace(/{total}/g, data.total.toLocaleString())
-  }
-  
-  return parsed
-}
-
-/**
- * App Proxy endpoint to fetch impact data and widget settings for storefront display.
- * This endpoint is called from the store's front-end via the app proxy.
+ * App Proxy endpoint to fetch impact data for storefront display.
+ * This endpoint returns only:
+ * - Real impact numbers (trees planted, CO2 offset, orders)
+ * - Business settings (trigger type, value)
+ * - Global enable/disable states
+ * 
+ * Visual settings are now handled directly in the Theme Editor.
+ * 
  * URL: /apps/afforestation/impact
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -70,53 +23,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const shop = session.shop
 
-  // Get shop record, core settings, and widget styles
-  const [shopRecord, settings] = await Promise.all([
+  // Get shop record and settings
+  const [shopRecord, settings, widgetStyles] = await Promise.all([
     prisma.shopifyShop.findUnique({
       where: { shopDomain: shop }
     }),
     prisma.shopifySettings.findUnique({
-      where: { shop },
-      include: { widgetStyles: true }
+      where: { shop }
+    }),
+    prisma.shopifyWidgetStyles.findUnique({
+      where: { shop }
     })
   ])
 
-  const styles = settings?.widgetStyles
-
-  // Default widget settings
-  const defaultStyles = {
-    widgetTheme: "light",
-    primaryColor: "#2d5a27",
-    secondaryColor: "#4ade80",
-    backgroundColor: "#f0fdf4",
-    textColor: "#14532d",
-    borderRadius: "rounded",
-    borderColor: "#bbf7d0",
-    fontFamily: "inherit",
-    showAnimation: true,
-    animationType: "pulse",
-    treeEmoji: "🌳",
-    showTreeCount: true,
-    impactMessage: "This purchase plants {count} tree{s}!",
-    forestTheme: "mixed",
-    forestBackground: "#fdfdfd",
-    showCo2Stats: true,
-    forestTitle: "Our Virtual Forest",
-    forestSubtitle: "Watch our forest grow with every purchase",
-    bannerEnabled: true,
-    bannerMessage: "{percent}% of every order funds climate action",
-    bannerStyle: "standard",
-    showBannerBranding: true,
-    bannerIcon: "🌳",
-    footerEnabled: true,
-    footerStyle: "standard",
-    footerLayout: "horizontal",
-    showFooterAnimation: true,
-    showFooterBranding: true,
-    footerMessage: "{total} trees planted",
-  }
-
-  // Query impact data first to use in variable parsing
+  // Query real impact data
   let treesPlanted = 0
   let co2Offset = 0
   let ordersContributing = 0
@@ -147,86 +67,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   // Calculate trees per order based on trigger type
-  const treesPerOrder = settings?.triggerType === "fixed" ? (settings?.triggerValue ?? 1) : 1
-  const triggerPercent = settings?.triggerType === "percentage" ? (settings?.triggerValue ?? 1) : 1
-  const triggerAmount = settings?.triggerType === "threshold" ? (settings?.triggerValue ?? 50) : 50
+  const triggerType = settings?.triggerType ?? "fixed"
+  const triggerValue = settings?.triggerValue ?? 1
+  const treesPerOrder = triggerType === "fixed" ? triggerValue : 1
 
-  // Variable data for message parsing
-  const variableData = {
-    count: treesPerOrder,
-    kg: Math.round(treesPerOrder * 24), // ~24kg CO2 per tree
-    percent: triggerPercent,
-    amount: triggerAmount,
-    total: treesPlanted,
-  }
-
-  // Build widget settings with parsed messages
-  const widgetSettings = {
-    // Theme & Colors
-    widgetTheme: styles?.widgetTheme ?? defaultStyles.widgetTheme,
-    primaryColor: styles?.primaryColor ?? defaultStyles.primaryColor,
-    secondaryColor: styles?.secondaryColor ?? defaultStyles.secondaryColor,
-    backgroundColor: styles?.backgroundColor ?? defaultStyles.backgroundColor,
-    textColor: styles?.textColor ?? defaultStyles.textColor,
-    borderRadius: styles?.borderRadius ?? defaultStyles.borderRadius,
-    borderColor: styles?.borderColor ?? defaultStyles.borderColor,
-    fontFamily: styles?.fontFamily ?? defaultStyles.fontFamily,
-    
-    // Animation
-    showAnimation: styles?.showAnimation ?? defaultStyles.showAnimation,
-    animationType: styles?.animationType ?? defaultStyles.animationType,
-    treeEmoji: styles?.treeEmoji ?? defaultStyles.treeEmoji,
-    
-    // Impact Widget - parse message variables
-    impactMessage: parseMessageVariables(
-      styles?.impactMessage ?? defaultStyles.impactMessage,
-      variableData
-    ),
-    showTreeCount: styles?.showTreeCount ?? defaultStyles.showTreeCount,
-    treesPerOrder,
-    
-    // Banner - parse message variables
-    bannerEnabled: styles?.bannerEnabled ?? defaultStyles.bannerEnabled,
-    bannerMessage: parseMessageVariables(
-      styles?.bannerMessage ?? defaultStyles.bannerMessage,
-      variableData
-    ),
-    bannerStyle: styles?.bannerStyle ?? defaultStyles.bannerStyle,
-    bannerIcon: styles?.bannerIcon ?? defaultStyles.bannerIcon,
-    showBannerBranding: styles?.showBannerBranding ?? defaultStyles.showBannerBranding,
-    
-    // Footer - parse message variables
-    footerEnabled: styles?.footerEnabled ?? defaultStyles.footerEnabled,
-    footerMessage: parseMessageVariables(
-      styles?.footerMessage ?? defaultStyles.footerMessage,
-      variableData
-    ),
-    footerStyle: styles?.footerStyle ?? defaultStyles.footerStyle,
-    footerLayout: styles?.footerLayout ?? defaultStyles.footerLayout,
-    showFooterAnimation: styles?.showFooterAnimation ?? defaultStyles.showFooterAnimation,
-    showFooterBranding: styles?.showFooterBranding ?? defaultStyles.showFooterBranding,
-    
-    // Forest
-    forestTitle: styles?.forestTitle ?? defaultStyles.forestTitle,
-    forestSubtitle: styles?.forestSubtitle ?? defaultStyles.forestSubtitle,
-    forestTheme: styles?.forestTheme ?? defaultStyles.forestTheme,
-    forestBackground: styles?.forestBackground ?? defaultStyles.forestBackground,
-    showCo2Stats: styles?.showCo2Stats ?? defaultStyles.showCo2Stats,
-    forestEmojis: FOREST_THEMES[styles?.forestTheme ?? "mixed"] || FOREST_THEMES.mixed,
-    
-    // Trigger settings (for reference)
-    triggerType: settings?.triggerType ?? "fixed",
-    triggerValue: settings?.triggerValue ?? 1,
-    impactType: settings?.impactType ?? "trees",
-  }
-
-  // Return CORS-friendly JSON response
+  // Return CORS-friendly JSON response with only business data
   return json(
     {
+      // Real impact numbers
       treesPlanted,
       co2Offset,
       ordersContributing,
-      settings: widgetSettings,
+      
+      // Business settings for widgets that need them
+      triggerType,
+      triggerValue,
+      treesPerOrder,
+      
+      // Global enable/disable states (for app embeds)
+      bannerEnabled: widgetStyles?.bannerEnabled ?? true,
+      footerEnabled: widgetStyles?.footerEnabled ?? true,
+      
+      // Impact type
+      impactType: settings?.impactType ?? "trees",
     },
     {
       headers: {

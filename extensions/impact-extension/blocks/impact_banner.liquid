@@ -1,105 +1,26 @@
 {% comment %}
   Afforestation Impact Banner
   A header/announcement bar style widget showing climate commitment
+  All visual settings are configurable in theme editor
 {% endcomment %}
 
-<div class="afforestation-banner" id="afforestation-banner-{{ block.id }}" style="display: none;">
+<div class="afforestation-banner" id="afforestation-banner-{{ block.id }}" style="
+  --banner-bg: {{ block.settings.background_color }};
+  --banner-text: {{ block.settings.text_color }};
+  --banner-padding: {% case block.settings.style %}{% when 'compact' %}6px 16px{% when 'bold' %}14px 24px{% else %}10px 20px{% endcase %};
+  --banner-size: {% case block.settings.style %}{% when 'bold' %}16px{% else %}14px{% endcase %};
+  --banner-weight: {% case block.settings.style %}{% when 'bold' %}600{% else %}400{% endcase %};
+">
   <div class="banner-content">
-    <span class="banner-icon" id="banner-icon-{{ block.id }}">🌳</span>
-    <span class="banner-text" id="banner-text-{{ block.id }}">
-      <strong id="banner-value-{{ block.id }}">1%</strong> of every order funds climate action
-    </span>
-    <span class="banner-badge" id="banner-badge-{{ block.id }}">
+    <span class="banner-icon">{{ block.settings.icon }}</span>
+    <span class="banner-text">{{ block.settings.message }}</span>
+    {% if block.settings.show_branding %}
+    <span class="banner-badge">
       <span class="banner-brand">Afforestation</span>
     </span>
+    {% endif %}
   </div>
 </div>
-
-<script>
-  (function() {
-    const blockId = '{{ block.id }}';
-    const banner = document.getElementById('afforestation-banner-' + blockId);
-    const iconEl = document.getElementById('banner-icon-' + blockId);
-    const textEl = document.getElementById('banner-text-' + blockId);
-    const valueEl = document.getElementById('banner-value-' + blockId);
-    const badgeEl = document.getElementById('banner-badge-' + blockId);
-    
-    async function loadSettings() {
-      try {
-        const response = await fetch('/apps/afforestation/impact');
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const data = await response.json();
-        const s = data.settings || {};
-        
-        // Check if banner is enabled
-        if (s.bannerEnabled === false) {
-          banner.style.display = 'none';
-          return;
-        }
-        
-        // Show banner
-        banner.style.display = 'block';
-        
-        // Apply styling based on style
-        let padding = '10px 20px';
-        let fontSize = '14px';
-        let fontWeight = '400';
-        
-        if (s.bannerStyle === 'compact') {
-          padding = '6px 16px';
-          fontSize = '13px';
-        } else if (s.bannerStyle === 'bold') {
-          padding = '14px 24px';
-          fontSize = '16px';
-          fontWeight = '600';
-        }
-        
-        banner.style.setProperty('--banner-bg', s.primaryColor || '#2d5a27');
-        banner.style.setProperty('--banner-text', '#ffffff');
-        banner.style.padding = padding;
-        banner.style.fontSize = fontSize;
-        banner.style.fontWeight = fontWeight;
-        
-        // Update icon based on impact type
-        if (s.impactType === 'carbon') {
-          iconEl.textContent = '💨';
-        } else if (s.impactType === 'both') {
-          iconEl.textContent = '🌍';
-        } else {
-          iconEl.textContent = s.bannerIcon || s.treeEmoji || '🌳';
-        }
-        
-        // Update message
-        let message = s.bannerMessage || '{percent}% of every order funds climate action';
-        
-        if (s.triggerType === 'percentage') {
-          message = message.replace('{percent}', s.triggerValue || '1');
-          message = message.replace('{count}', s.triggerValue || '1');
-        } else if (s.triggerType === 'fixed') {
-          const count = s.triggerValue || 1;
-          message = count + ' tree' + (count > 1 ? 's' : '') + ' planted with every order';
-        } else if (s.triggerType === 'threshold') {
-          message = '1 tree for every $' + (s.triggerValue || 50) + ' spent';
-        }
-        
-        textEl.innerHTML = message;
-        
-        // Show/hide branding
-        if (s.showBannerBranding === false) {
-          badgeEl.style.display = 'none';
-        }
-        
-      } catch (error) {
-        console.warn('Afforestation: Could not load settings', error);
-        // Show default banner on error
-        banner.style.display = 'block';
-      }
-    }
-    
-    loadSettings();
-  })();
-</script>
 
 {% schema %}
 {
@@ -107,8 +28,58 @@
   "target": "section",
   "settings": [
     {
-      "type": "paragraph",
-      "content": "Display a banner showing your climate commitment. Styling is configured in the Afforestation app."
+      "type": "header",
+      "content": "Message"
+    },
+    {
+      "type": "text",
+      "id": "message",
+      "label": "Banner message",
+      "default": "🌱 1% of every order funds climate action",
+      "info": "Write in any language!"
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon/Emoji",
+      "default": "🌳"
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Banner style",
+      "options": [
+        { "value": "compact", "label": "Compact - smaller, subtle" },
+        { "value": "standard", "label": "Standard - balanced" },
+        { "value": "bold", "label": "Bold - large, prominent" }
+      ],
+      "default": "standard"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_branding",
+      "label": "Show Afforestation badge",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#2d5a27"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#ffffff"
     }
   ]
 }
@@ -118,12 +89,16 @@
   .afforestation-banner {
     --banner-bg: #2d5a27;
     --banner-text: #ffffff;
+    --banner-padding: 10px 20px;
+    --banner-size: 14px;
+    --banner-weight: 400;
     
     background: var(--banner-bg);
     color: var(--banner-text);
-    padding: 10px 20px;
+    padding: var(--banner-padding);
     text-align: center;
-    font-size: 14px;
+    font-size: var(--banner-size);
+    font-weight: var(--banner-weight);
   }
   
   .afforestation-banner .banner-content {
@@ -140,10 +115,6 @@
   
   .afforestation-banner .banner-text {
     color: var(--banner-text);
-  }
-  
-  .afforestation-banner .banner-text strong {
-    font-weight: 700;
   }
   
   .afforestation-banner .banner-badge {

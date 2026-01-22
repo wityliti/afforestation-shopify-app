@@ -1,0 +1,226 @@
+{% comment %}
+  Afforestation Footer Badge - App Embed Block
+  Shows total impact, fixed position on store
+{% endcomment %}
+
+{% if block.settings.enabled %}
+<div class="afforestation-footer-embed {{ block.settings.position }}" id="afforestation-footer-embed" style="
+  --footer-primary: {{ block.settings.primary_color }};
+  --footer-bg: {{ block.settings.background_color }};
+  --footer-border: {{ block.settings.primary_color }}33;
+">
+  <div class="footer-badge-content">
+    <div class="footer-badge-icon {% if block.settings.animate %}animate-bounce{% endif %}">
+      <span>{{ block.settings.icon }}</span>
+    </div>
+    <div class="footer-badge-stats">
+      <div class="footer-stat">
+        <span class="footer-stat-value" id="footer-embed-count">0</span>
+        {% unless block.settings.style == 'minimal' %}
+        <span class="footer-stat-label">{{ block.settings.label }}</span>
+        {% endunless %}
+      </div>
+    </div>
+    {% if block.settings.show_branding and block.settings.style == 'detailed' %}
+    <div class="footer-badge-brand">
+      <span class="footer-brand">Afforestation</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    async function loadImpact() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) return;
+        const data = await response.json();
+        const countEl = document.getElementById('footer-embed-count');
+        if (countEl && data.treesPlanted !== undefined) {
+          animateCount(countEl, data.treesPlanted);
+        }
+      } catch (e) {
+        console.warn('Afforestation: Could not load impact', e);
+      }
+    }
+    
+    function animateCount(el, target) {
+      const duration = 1500;
+      const start = performance.now();
+      function update(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.floor(target * easeOut).toLocaleString();
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadImpact);
+    } else {
+      loadImpact();
+    }
+  })();
+</script>
+
+<style>
+  .afforestation-footer-embed {
+    --footer-primary: #2d5a27;
+    --footer-bg: #f0fdf4;
+    --footer-border: rgba(45, 90, 39, 0.2);
+    
+    position: fixed;
+    bottom: 20px;
+    z-index: 999;
+    background: var(--footer-bg);
+    border: 1px solid var(--footer-border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .afforestation-footer-embed.bottom-left { left: 20px; }
+  .afforestation-footer-embed.bottom-right { right: 20px; }
+  
+  .afforestation-footer-embed:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  .afforestation-footer-embed .footer-badge-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .afforestation-footer-embed .footer-badge-icon {
+    font-size: 20px;
+  }
+  
+  .afforestation-footer-embed .footer-badge-icon.animate-bounce {
+    animation: footer-bounce 2s ease-in-out infinite;
+  }
+  
+  @keyframes footer-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  
+  .afforestation-footer-embed .footer-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  
+  .afforestation-footer-embed .footer-stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--footer-primary);
+  }
+  
+  .afforestation-footer-embed .footer-stat-label {
+    font-size: 12px;
+    color: var(--footer-primary);
+    opacity: 0.8;
+  }
+  
+  .afforestation-footer-embed .footer-brand {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--footer-primary);
+    opacity: 0.6;
+  }
+  
+  @media (max-width: 480px) {
+    .afforestation-footer-embed {
+      bottom: 10px;
+    }
+    .afforestation-footer-embed.bottom-left { left: 10px; }
+    .afforestation-footer-embed.bottom-right { right: 10px; }
+  }
+</style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Impact Footer Badge",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable footer badge",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Display"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label text",
+      "default": "trees planted",
+      "info": "Write in any language!"
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon/Emoji",
+      "default": "🌳"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Badge style",
+      "options": [
+        { "value": "minimal", "label": "Minimal (icon + count)" },
+        { "value": "standard", "label": "Standard (with label)" },
+        { "value": "detailed", "label": "Detailed (with branding)" }
+      ],
+      "default": "standard"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Position",
+      "options": [
+        { "value": "bottom-left", "label": "Bottom Left" },
+        { "value": "bottom-right", "label": "Bottom Right" }
+      ],
+      "default": "bottom-right"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate",
+      "label": "Animate icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_branding",
+      "label": "Show Afforestation branding",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#2d5a27"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#f0fdf4"
+    }
+  ]
+}
+{% endschema %}

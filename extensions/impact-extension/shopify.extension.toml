@@ -1,3 +1,7 @@
-name = "impact-extension"
+api_version = "2024-10"
+
+[[extensions]]
 type = "theme"
+name = "impact-extension"
+handle = "impact-extension"
 uid = "887c5c28-2f8e-d541-c34e-b12d3fed2482da27d86d"

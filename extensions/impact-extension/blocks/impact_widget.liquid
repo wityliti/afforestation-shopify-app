@@ -1,72 +1,56 @@
 {% comment %}
   Afforestation Impact Widget
   Displays on product pages to show customers they're making a difference
+  All visual settings are configurable in theme editor
 {% endcomment %}
 
-<div class="afforestation-impact-widget" id="afforestation-widget-{{ block.id }}">
+{% assign count = block.settings.trees_count %}
+{% assign message = block.settings.message %}
+{% assign plural = "" %}
+{% if count > 1 %}{% assign plural = "s" %}{% endif %}
+{% assign parsed_message = message | replace: '{count}', count | replace: '{s}', plural %}
+
+<div class="afforestation-impact-widget" id="afforestation-widget-{{ block.id }}" style="
+  --widget-bg: {{ block.settings.background_color }};
+  --widget-border: {{ block.settings.border_color }};
+  --widget-text: {{ block.settings.text_color }};
+  --widget-primary: {{ block.settings.primary_color }};
+  --widget-radius: {% case block.settings.border_style %}{% when 'sharp' %}0px{% when 'pill' %}50px{% else %}8px{% endcase %};
+  --widget-font: {{ block.settings.font_family }};
+">
   <div class="impact-content">
-    <span class="impact-icon" id="widget-icon-{{ block.id }}">🌳</span>
-    <span class="impact-text" id="widget-text-{{ block.id }}">
-      This purchase plants <strong>1 tree</strong>!
+    <span class="impact-icon {% if block.settings.animate %}animate-{{ block.settings.animation_type }}{% endif %}">
+      {{ block.settings.icon }}
     </span>
+    <span class="impact-text">{{ parsed_message }}</span>
   </div>
+  {% if block.settings.show_total and block.settings.total_message != blank %}
+  <div class="impact-total" id="widget-total-{{ block.id }}">
+    <span class="total-icon">🌍</span>
+    <span class="total-text">Loading total impact...</span>
+  </div>
+  {% endif %}
 </div>
 
+{% if block.settings.show_total %}
 <script>
   (function() {
-    const widgetId = '{{ block.id }}';
-    const widget = document.getElementById('afforestation-widget-' + widgetId);
-    const iconEl = document.getElementById('widget-icon-' + widgetId);
-    const textEl = document.getElementById('widget-text-' + widgetId);
+    const totalEl = document.querySelector('#widget-total-{{ block.id }} .total-text');
+    if (!totalEl) return;
     
-    async function loadSettings() {
-      try {
-        const response = await fetch('/apps/afforestation/impact');
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const data = await response.json();
-        const s = data.settings || {};
-        
-        // Apply widget styling
-        widget.style.setProperty('--widget-bg', s.backgroundColor || '#f0f9f0');
-        widget.style.setProperty('--widget-border', s.borderColor || '#d4edda');
-        widget.style.setProperty('--widget-text', s.textColor || '#1a1a1a');
-        widget.style.setProperty('--widget-primary', s.primaryColor || '#2d5a27');
-        
-        // Apply border radius
-        const radiusMap = { sharp: '0px', pill: '50px', rounded: '8px' };
-        widget.style.borderRadius = radiusMap[s.borderRadius] || '8px';
-        
-        // Apply font
-        if (s.fontFamily && s.fontFamily !== 'inherit') {
-          widget.style.fontFamily = s.fontFamily;
-        }
-        
-        // Update icon
-        iconEl.textContent = s.treeEmoji || '🌳';
-        
-        // Apply animation
-        if (s.showAnimation) {
-          iconEl.classList.add('animate-' + (s.animationType || 'pulse'));
-        }
-        
-        // Update message
-        const count = s.treesPerOrder || 1;
-        const message = (s.customMessage || 'This purchase plants {count} tree{s}!')
-          .replace('{count}', count)
-          .replace('{s}', count > 1 ? 's' : '');
-        
-        textEl.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/(\d+\s*tree[s]?)/gi, '<strong>$1</strong>');
-        
-      } catch (error) {
-        console.warn('Afforestation: Could not load settings', error);
-      }
-    }
-    
-    loadSettings();
+    fetch('/apps/afforestation/impact')
+      .then(r => r.json())
+      .then(data => {
+        const total = data.treesPlanted || 0;
+        const message = '{{ block.settings.total_message }}'.replace('{total}', total.toLocaleString());
+        totalEl.textContent = message;
+      })
+      .catch(() => {
+        totalEl.parentElement.style.display = 'none';
+      });
   })();
 </script>
+{% endif %}
 
 {% schema %}
 {
@@ -74,8 +58,123 @@
   "target": "section",
   "settings": [
     {
-      "type": "paragraph",
-      "content": "Widget styling is configured in your Afforestation app dashboard."
+      "type": "header",
+      "content": "Message"
+    },
+    {
+      "type": "range",
+      "id": "trees_count",
+      "label": "Trees per purchase",
+      "min": 1,
+      "max": 100,
+      "step": 1,
+      "default": 1
+    },
+    {
+      "type": "text",
+      "id": "message",
+      "label": "Widget message",
+      "default": "This purchase plants {count} tree{s}!",
+      "info": "Variables: {count} = trees, {s} = plural"
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon/Emoji",
+      "default": "🌳"
+    },
+    {
+      "type": "header",
+      "content": "Total Impact (optional)"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_total",
+      "label": "Show store's total impact",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "total_message",
+      "label": "Total impact message",
+      "default": "{total} trees planted by this store",
+      "info": "Variables: {total} = total trees"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#f0fdf4"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#14532d"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#bbf7d0"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Highlight Color",
+      "default": "#2d5a27"
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "select",
+      "id": "border_style",
+      "label": "Border style",
+      "options": [
+        { "value": "rounded", "label": "Rounded" },
+        { "value": "sharp", "label": "Sharp" },
+        { "value": "pill", "label": "Pill" }
+      ],
+      "default": "rounded"
+    },
+    {
+      "type": "select",
+      "id": "font_family",
+      "label": "Font",
+      "options": [
+        { "value": "inherit", "label": "Inherit from theme" },
+        { "value": "system-ui, sans-serif", "label": "System Default" },
+        { "value": "'Inter', sans-serif", "label": "Inter" },
+        { "value": "'Roboto', sans-serif", "label": "Roboto" }
+      ],
+      "default": "inherit"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate",
+      "label": "Enable animation",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "animation_type",
+      "label": "Animation type",
+      "options": [
+        { "value": "pulse", "label": "Pulse" },
+        { "value": "bounce", "label": "Bounce" },
+        { "value": "glow", "label": "Glow" }
+      ],
+      "default": "pulse"
     }
   ]
 }
@@ -83,18 +182,19 @@
 
 <style>
   .afforestation-impact-widget {
-    --widget-bg: #f0f9f0;
-    --widget-border: #d4edda;
-    --widget-text: #1a1a1a;
+    --widget-bg: #f0fdf4;
+    --widget-border: #bbf7d0;
+    --widget-text: #14532d;
     --widget-primary: #2d5a27;
+    --widget-radius: 8px;
+    --widget-font: inherit;
     
     background: var(--widget-bg);
     border: 1px solid var(--widget-border);
-    border-radius: 8px;
+    border-radius: var(--widget-radius);
     padding: 12px 16px;
     margin: 10px 0;
-    display: flex;
-    align-items: center;
+    font-family: var(--widget-font);
     transition: all 0.3s ease;
   }
   
@@ -120,31 +220,50 @@
     line-height: 1.4;
   }
   
-  .afforestation-impact-widget .impact-text strong {
-    color: var(--widget-primary);
-    font-weight: 600;
+  .afforestation-impact-widget .impact-total {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--widget-text);
+    opacity: 0.8;
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid var(--widget-border);
+  }
+  
+  .afforestation-impact-widget .total-icon {
+    font-size: 14px;
   }
   
   /* Animations */
   .afforestation-impact-widget .animate-pulse {
-    animation: afforestation-pulse 2s ease-in-out infinite;
+    animation: widget-pulse 2s ease-in-out infinite;
   }
   
   .afforestation-impact-widget .animate-bounce {
-    animation: afforestation-bounce 1s ease-in-out infinite;
+    animation: widget-bounce 1s ease-in-out infinite;
   }
   
-  @keyframes afforestation-pulse {
+  .afforestation-impact-widget .animate-glow {
+    animation: widget-glow 2s ease-in-out infinite;
+  }
+  
+  @keyframes widget-pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.15); }
   }
   
-  @keyframes afforestation-bounce {
+  @keyframes widget-bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
   }
   
-  /* Responsive */
+  @keyframes widget-glow {
+    0%, 100% { filter: drop-shadow(0 0 2px var(--widget-primary)); }
+    50% { filter: drop-shadow(0 0 8px var(--widget-primary)); }
+  }
+  
   @media (max-width: 480px) {
     .afforestation-impact-widget {
       padding: 10px 14px;
