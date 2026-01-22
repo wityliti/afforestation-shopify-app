@@ -2,7 +2,7 @@
 
 client_id = "904a6dcd94a826cb45ad1c2334126ebe"
 name = "afforestation.org"
-application_url = "https://example.com"
+application_url = "https://afforestation-shopify-app-production.up.railway.app"
 embedded = true
 
 [build]
@@ -39,9 +39,9 @@ api_version = "2026-04"
 scopes = "read_orders"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://afforestation-shopify-app-production.up.railway.app/auth/callback" ]
 
 [app_proxy]
-url = "https://example.com/proxy"
+url = "https://afforestation-shopify-app-production.up.railway.app/proxy"
 subpath = "afforestation"
 prefix = "apps"
