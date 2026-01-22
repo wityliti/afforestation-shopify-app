@@ -29,11 +29,11 @@ export default function App() {
       <div className={styles.content}>
         {/* Logo */}
         <div className={styles.logoContainer}>
-          <svg className={styles.logoIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C12 2 7 7 7 12C7 14.5 8.5 16.5 10.5 17.5V22H13.5V17.5C15.5 16.5 17 14.5 17 12C17 7 12 2 12 2Z" fill="#16a34a"/>
-            <path d="M12 6C12 6 10 9 10 11C10 12.5 11 13.5 12 14C13 13.5 14 12.5 14 11C14 9 12 6 12 6Z" fill="#22c55e"/>
-            <circle cx="12" cy="11" r="1.5" fill="#dcfce7"/>
-          </svg>
+          <img 
+            src="/afforestation-logo.png" 
+            alt="Afforestation Logo" 
+            className={styles.logoImage}
+          />
         </div>
 
         {/* Headline */}
