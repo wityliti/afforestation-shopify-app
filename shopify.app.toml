@@ -16,7 +16,7 @@ api_version = "2026-04"
   uri = "/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
-  topics = [ "orders/paid" ]
+  topics = [ "orders/create" ]
   uri = "/webhooks/orders/paid"
 
 # GDPR webhooks - uncomment after Protected Customer Data approval

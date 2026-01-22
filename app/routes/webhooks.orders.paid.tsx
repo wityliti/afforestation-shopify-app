@@ -9,7 +9,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   console.log(`Received ${topic} webhook for ${shop}`);
 
-  if (topic !== "ORDERS_PAID") {
+  // Accept both ORDERS_CREATE and ORDERS_PAID (when protected data access is approved)
+  if (topic !== "ORDERS_PAID" && topic !== "ORDERS_CREATE") {
     return new Response();
   }
 
