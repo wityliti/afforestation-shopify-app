@@ -1,46 +1,159 @@
-{% assign treesCount = block.settings.trees_count | default: 1 %}
+{% comment %}
+  Afforestation Impact Widget
+  Displays on product pages to show customers they're making a difference
+{% endcomment %}
 
-<div class="afforestation-impact-widget">
+<div class="afforestation-impact-widget" id="afforestation-widget-{{ block.id }}">
   <div class="impact-content">
-    <span class="impact-icon">🌳</span>
-    <span class="impact-text">
-      This purchase plants <strong>{{ treesCount }} tree{{ treesCount | pluralize: 's' }}</strong>!
+    <span class="impact-icon" id="widget-icon-{{ block.id }}">🌳</span>
+    <span class="impact-text" id="widget-text-{{ block.id }}">
+      This purchase plants <strong>1 tree</strong>!
     </span>
   </div>
 </div>
+
+<script>
+  (function() {
+    const widgetId = '{{ block.id }}';
+    const widget = document.getElementById('afforestation-widget-' + widgetId);
+    const iconEl = document.getElementById('widget-icon-' + widgetId);
+    const textEl = document.getElementById('widget-text-' + widgetId);
+    
+    async function loadSettings() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        const s = data.settings || {};
+        
+        // Apply widget styling
+        widget.style.setProperty('--widget-bg', s.backgroundColor || '#f0f9f0');
+        widget.style.setProperty('--widget-border', s.borderColor || '#d4edda');
+        widget.style.setProperty('--widget-text', s.textColor || '#1a1a1a');
+        widget.style.setProperty('--widget-primary', s.primaryColor || '#2d5a27');
+        
+        // Apply border radius
+        const radiusMap = { sharp: '0px', pill: '50px', rounded: '8px' };
+        widget.style.borderRadius = radiusMap[s.borderRadius] || '8px';
+        
+        // Apply font
+        if (s.fontFamily && s.fontFamily !== 'inherit') {
+          widget.style.fontFamily = s.fontFamily;
+        }
+        
+        // Update icon
+        iconEl.textContent = s.treeEmoji || '🌳';
+        
+        // Apply animation
+        if (s.showAnimation) {
+          iconEl.classList.add('animate-' + (s.animationType || 'pulse'));
+        }
+        
+        // Update message
+        const count = s.treesPerOrder || 1;
+        const message = (s.customMessage || 'This purchase plants {count} tree{s}!')
+          .replace('{count}', count)
+          .replace('{s}', count > 1 ? 's' : '');
+        
+        textEl.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/(\d+\s*tree[s]?)/gi, '<strong>$1</strong>');
+        
+      } catch (error) {
+        console.warn('Afforestation: Could not load settings', error);
+      }
+    }
+    
+    loadSettings();
+  })();
+</script>
 
 {% schema %}
 {
   "name": "Tree Impact Widget",
   "target": "section",
   "settings": [
-    { "type": "number", "id": "trees_count", "label": "Trees to plant", "default": 1 },
-    { "type": "color", "id": "text_color", "label": "Text Color", "default": "#2d5a27" }
+    {
+      "type": "paragraph",
+      "content": "Widget styling is configured in your Afforestation app dashboard."
+    }
   ]
 }
 {% endschema %}
 
 <style>
   .afforestation-impact-widget {
-    background: #f0f9f0;
-    border: 1px solid #d4edda;
+    --widget-bg: #f0f9f0;
+    --widget-border: #d4edda;
+    --widget-text: #1a1a1a;
+    --widget-primary: #2d5a27;
+    
+    background: var(--widget-bg);
+    border: 1px solid var(--widget-border);
     border-radius: 8px;
     padding: 12px 16px;
     margin: 10px 0;
     display: flex;
     align-items: center;
+    transition: all 0.3s ease;
   }
+  
+  .afforestation-impact-widget:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
   .afforestation-impact-widget .impact-content {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: {{ block.settings.text_color }};
+    color: var(--widget-text);
   }
+  
   .afforestation-impact-widget .impact-icon {
     font-size: 24px;
+    display: inline-block;
   }
+  
   .afforestation-impact-widget .impact-text {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.4;
+  }
+  
+  .afforestation-impact-widget .impact-text strong {
+    color: var(--widget-primary);
+    font-weight: 600;
+  }
+  
+  /* Animations */
+  .afforestation-impact-widget .animate-pulse {
+    animation: afforestation-pulse 2s ease-in-out infinite;
+  }
+  
+  .afforestation-impact-widget .animate-bounce {
+    animation: afforestation-bounce 1s ease-in-out infinite;
+  }
+  
+  @keyframes afforestation-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  
+  @keyframes afforestation-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  
+  /* Responsive */
+  @media (max-width: 480px) {
+    .afforestation-impact-widget {
+      padding: 10px 14px;
+    }
+    .afforestation-impact-widget .impact-icon {
+      font-size: 20px;
+    }
+    .afforestation-impact-widget .impact-text {
+      font-size: 14px;
+    }
   }
 </style>

@@ -1,61 +1,163 @@
-<div class="afforestation-impact-page">
+{% comment %}
+  Afforestation Virtual Forest Page
+  A full-page section showcasing your store's environmental impact
+{% endcomment %}
+
+<div class="afforestation-impact-page" id="afforestation-forest-{{ block.id }}">
   <div class="page-header">
-    <h1>Our Sustainability Impact</h1>
-    <p>We are committed to a greener future. Every purchase you make helps us plant trees and offset carbon.</p>
+    <h1 id="forest-title-{{ block.id }}">Our Sustainability Impact</h1>
+    <p id="forest-subtitle-{{ block.id }}">We are committed to a greener future. Every purchase you make helps us plant trees and offset carbon.</p>
   </div>
 
   <div class="impact-stats">
-    <div class="stat-card">
+    <div class="stat-card" id="stat-trees-{{ block.id }}">
       <div class="stat-icon">🌳</div>
-      <div class="stat-value" id="forest-trees-count">Loading...</div>
+      <div class="stat-value" id="forest-trees-count-{{ block.id }}">
+        <span class="loading-skeleton"></span>
+      </div>
       <div class="stat-label">Trees Planted</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card stat-co2" id="stat-co2-{{ block.id }}">
       <div class="stat-icon">💨</div>
-      <div class="stat-value" id="forest-co2-count">Loading...</div>
-      <div class="stat-label">kg of CO2 Offset</div>
+      <div class="stat-value" id="forest-co2-count-{{ block.id }}">
+        <span class="loading-skeleton"></span>
+      </div>
+      <div class="stat-label">kg of CO₂ Offset</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🛒</div>
+      <div class="stat-value" id="forest-orders-count-{{ block.id }}">
+        <span class="loading-skeleton"></span>
+      </div>
+      <div class="stat-label">Orders Contributing</div>
     </div>
   </div>
 
   <div class="virtual-forest">
-    <h2>Our Virtual Forest</h2>
-    <div class="forest-grid" id="forest-grid">
-      <!-- Trees will be rendered here via JS -->
+    <h2>🌲 Our Virtual Forest 🌲</h2>
+    <div class="forest-grid" id="forest-grid-{{ block.id }}">
+      <div class="forest-loading">Growing trees...</div>
     </div>
+    <p class="forest-note" id="forest-note-{{ block.id }}"></p>
+  </div>
+  
+  <div class="impact-cta">
+    <p>Every tree makes a difference. Thank you for being part of our journey towards a greener planet! 💚</p>
+    <a href="https://afforestation.org" target="_blank" class="cta-link">
+      Learn more at afforestation.org →
+    </a>
   </div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', async function() {
-    const treesEl = document.getElementById('forest-trees-count');
-    const co2El = document.getElementById('forest-co2-count');
-    const forestGrid = document.getElementById('forest-grid');
+  (function() {
+    const blockId = '{{ block.id }}';
+    const container = document.getElementById('afforestation-forest-' + blockId);
+    const treesEl = document.getElementById('forest-trees-count-' + blockId);
+    const co2El = document.getElementById('forest-co2-count-' + blockId);
+    const ordersEl = document.getElementById('forest-orders-count-' + blockId);
+    const forestGrid = document.getElementById('forest-grid-' + blockId);
+    const titleEl = document.getElementById('forest-title-' + blockId);
+    const subtitleEl = document.getElementById('forest-subtitle-' + blockId);
+    const noteEl = document.getElementById('forest-note-' + blockId);
+    const statTrees = document.getElementById('stat-trees-' + blockId);
+    const statCo2 = document.getElementById('stat-co2-' + blockId);
 
-    try {
-      const response = await fetch('/apps/afforestation/impact');
-      if (response.ok) {
-        const data = await response.json();
-        treesEl.textContent = data.treesPlanted.toLocaleString();
-        co2El.textContent = data.co2Offset.toLocaleString();
+    function animateCount(element, target, duration = 1500) {
+      const start = 0;
+      const startTime = performance.now();
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(start + (target - start) * easeOut);
+        element.textContent = current.toLocaleString();
         
-        // Render trees based on actual count (max 50 for display)
-        const treesToShow = Math.min(data.treesPlanted, 50);
-        for (let i = 0; i < treesToShow; i++) {
-          const tree = document.createElement('span');
-          tree.textContent = '🌲';
-          tree.style.fontSize = '24px';
-          forestGrid.appendChild(tree);
+        if (progress < 1) {
+          requestAnimationFrame(update);
         }
-      } else {
-        throw new Error('Failed to fetch');
       }
-    } catch (error) {
-      // Fallback to placeholder data if proxy fails
-      treesEl.textContent = '0';
-      co2El.textContent = '0';
-      console.warn('Afforestation: Could not load impact data', error);
+      
+      requestAnimationFrame(update);
     }
-  });
+
+    async function loadData() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        const s = data.settings || {};
+        
+        // Apply styling from settings
+        container.style.setProperty('--primary-color', s.primaryColor || '#2d5a27');
+        container.style.setProperty('--secondary-color', s.secondaryColor || '#4ade80');
+        container.style.setProperty('--text-color', s.textColor || '#1a1a1a');
+        container.style.setProperty('--forest-bg', s.forestBackground || '#fdfdfd');
+        container.style.setProperty('--widget-bg', s.backgroundColor || '#f8fcf8');
+        container.style.setProperty('--border-color', s.borderColor || '#e0eee0');
+        
+        // Apply font
+        if (s.fontFamily && s.fontFamily !== 'inherit') {
+          container.style.fontFamily = s.fontFamily;
+        }
+        
+        // Update titles
+        if (s.forestTitle) titleEl.textContent = s.forestTitle;
+        if (s.forestSubtitle) subtitleEl.textContent = s.forestSubtitle;
+        
+        // Hide CO2 stats if disabled
+        if (!s.showCo2Stats) {
+          statCo2.style.display = 'none';
+        }
+        
+        // Animate stats
+        animateCount(treesEl, data.treesPlanted || 0);
+        animateCount(co2El, Math.round(data.co2Offset) || 0);
+        animateCount(ordersEl, data.ordersContributing || 0);
+        
+        // Render forest with theme
+        const forestEmojis = s.forestEmojis || ['🌳', '🌲', '🌴', '🌿'];
+        const treesToShow = Math.min(data.treesPlanted || 0, 100);
+        
+        forestGrid.innerHTML = '';
+        
+        if (treesToShow === 0) {
+          forestGrid.innerHTML = '<div class="empty-forest">🌱 Plant the first tree with your purchase!</div>';
+        } else {
+          for (let i = 0; i < treesToShow; i++) {
+            const tree = document.createElement('span');
+            tree.className = 'forest-tree';
+            tree.textContent = forestEmojis[i % forestEmojis.length];
+            tree.style.animationDelay = (i * 30) + 'ms';
+            forestGrid.appendChild(tree);
+          }
+          
+          if (data.treesPlanted > 100) {
+            noteEl.textContent = '...and ' + (data.treesPlanted - 100).toLocaleString() + ' more trees growing around the world!';
+          }
+        }
+        
+      } catch (error) {
+        treesEl.textContent = '0';
+        co2El.textContent = '0';
+        ordersEl.textContent = '0';
+        forestGrid.innerHTML = '<div class="empty-forest">🌱 Be the first to plant a tree!</div>';
+        console.warn('Afforestation: Could not load impact data', error);
+      }
+    }
+    
+    // Start loading when visible
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadData();
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    
+    observer.observe(container);
+  })();
 </script>
 
 {% schema %}
@@ -63,43 +165,215 @@
   "name": "Virtual Forest Page",
   "target": "section",
   "settings": [
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Our Sustainability Impact" }
+    {
+      "type": "paragraph",
+      "content": "Configure your Virtual Forest styling in the Afforestation app dashboard."
+    }
   ]
 }
 {% endschema %}
 
 <style>
   .afforestation-impact-page {
+    --primary-color: #2d5a27;
+    --secondary-color: #4ade80;
+    --text-color: #1a1a1a;
+    --forest-bg: #fdfdfd;
+    --widget-bg: #f8fcf8;
+    --border-color: #e0eee0;
+    
     max-width: 1000px;
-    margin: 40px auto;
+    margin: 60px auto;
     padding: 0 20px;
     text-align: center;
-    font-family: sans-serif;
+    color: var(--text-color);
   }
-  .impact-stats {
+  
+  .afforestation-impact-page .page-header h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    color: var(--primary-color);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  
+  .afforestation-impact-page .page-header p {
+    font-size: 18px;
+    color: var(--text-color);
+    opacity: 0.8;
+    max-width: 600px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+  
+  .afforestation-impact-page .impact-stats {
     display: flex;
     justify-content: center;
-    gap: 40px;
+    flex-wrap: wrap;
+    gap: 24px;
     margin: 40px 0;
   }
-  .stat-card {
-    background: #f8fcf8;
-    border: 1px solid #e0eee0;
-    border-radius: 12px;
-    padding: 30px;
-    min-width: 200px;
+  
+  .afforestation-impact-page .stat-card {
+    background: var(--widget-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 32px 40px;
+    min-width: 180px;
+    transition: all 0.3s ease;
   }
-  .stat-icon { font-size: 40px; margin-bottom: 10px; }
-  .stat-value { font-size: 32px; font-weight: bold; color: #2d5a27; }
-  .stat-label { color: #666; margin-top: 5px; }
-  .forest-grid {
+  
+  .afforestation-impact-page .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  }
+  
+  .afforestation-impact-page .stat-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  
+  .afforestation-impact-page .stat-value {
+    font-size: clamp(32px, 4vw, 42px);
+    font-weight: 700;
+    color: var(--primary-color);
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .afforestation-impact-page .stat-co2 .stat-value {
+    color: var(--secondary-color);
+  }
+  
+  .afforestation-impact-page .stat-label {
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-top: 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .afforestation-impact-page .loading-skeleton {
+    display: block;
+    width: 80px;
+    height: 40px;
+    background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 8px;
+    margin: 0 auto;
+  }
+  
+  @keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  .afforestation-impact-page .virtual-forest {
+    margin-top: 60px;
+  }
+  
+  .afforestation-impact-page .virtual-forest h2 {
+    font-size: 24px;
+    color: var(--primary-color);
+    margin-bottom: 24px;
+  }
+  
+  .afforestation-impact-page .forest-grid {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 12px;
+    padding: 32px;
+    background: var(--forest-bg);
+    border-radius: 20px;
+    min-height: 120px;
+    align-items: center;
+  }
+  
+  .afforestation-impact-page .forest-tree {
+    font-size: 28px;
+    display: inline-block;
+    animation: tree-grow 0.5s ease-out forwards;
+    opacity: 0;
+    transform: scale(0);
+  }
+  
+  @keyframes tree-grow {
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .afforestation-impact-page .forest-loading,
+  .afforestation-impact-page .empty-forest {
+    color: var(--text-color);
+    opacity: 0.6;
+    font-size: 16px;
     padding: 20px;
-    background: #fdfdfd;
-    border-radius: 12px;
+  }
+  
+  .afforestation-impact-page .forest-note {
+    margin-top: 16px;
+    color: var(--primary-color);
+    font-size: 14px;
+    font-style: italic;
+  }
+  
+  .afforestation-impact-page .impact-cta {
+    margin-top: 60px;
+    padding: 32px;
+    background: linear-gradient(135deg, var(--widget-bg) 0%, rgba(255,255,255,0.8) 100%);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .afforestation-impact-page .impact-cta p {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: var(--text-color);
+  }
+  
+  .afforestation-impact-page .cta-link {
+    display: inline-block;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+    padding: 12px 24px;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .afforestation-impact-page .cta-link:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .afforestation-impact-page {
+      margin: 40px auto;
+    }
+    
+    .afforestation-impact-page .impact-stats {
+      gap: 16px;
+    }
+    
+    .afforestation-impact-page .stat-card {
+      padding: 24px 28px;
+      min-width: 140px;
+    }
+    
+    .afforestation-impact-page .stat-icon {
+      font-size: 36px;
+    }
+    
+    .afforestation-impact-page .forest-tree {
+      font-size: 24px;
+    }
   }
 </style>

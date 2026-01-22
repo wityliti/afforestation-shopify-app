@@ -48,6 +48,28 @@ model ShopifySettings {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Widget Customization Settings
+  widgetTheme         String  @default("light") @map("widget_theme") // light, dark, custom
+  primaryColor        String  @default("#2d5a27") @map("primary_color")
+  secondaryColor      String  @default("#4ade80") @map("secondary_color")
+  backgroundColor     String  @default("#f0f9f0") @map("background_color")
+  textColor           String  @default("#1a1a1a") @map("text_color")
+  borderRadius        String  @default("rounded") @map("border_radius") // rounded, sharp, pill
+  borderColor         String  @default("#d4edda") @map("border_color")
+  fontFamily          String  @default("inherit") @map("font_family")
+  showAnimation       Boolean @default(true) @map("show_animation")
+  animationType       String  @default("pulse") @map("animation_type") // pulse, bounce, none
+  treeEmoji           String  @default("🌳") @map("tree_emoji")
+  showTreeCount       Boolean @default(true) @map("show_tree_count")
+  customMessage       String  @default("This purchase plants {count} tree{s}!") @map("custom_message")
+  
+  // Virtual Forest Settings
+  forestTheme         String  @default("mixed") @map("forest_theme") // mixed, pine, deciduous, tropical
+  forestBackground    String  @default("#fdfdfd") @map("forest_background")
+  showCo2Stats        Boolean @default(true) @map("show_co2_stats")
+  forestTitle         String  @default("Our Virtual Forest") @map("forest_title")
+  forestSubtitle      String  @default("Watch our forest grow with every purchase") @map("forest_subtitle")
+
   // Relation to ShopifyShop
   shopifyShop ShopifyShop? @relation(fields: [shop], references: [shopDomain])
 
