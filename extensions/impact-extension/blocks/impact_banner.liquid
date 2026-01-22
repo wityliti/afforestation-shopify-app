@@ -3,13 +3,13 @@
   A header/announcement bar style widget showing climate commitment
 {% endcomment %}
 
-<div class="afforestation-banner" id="afforestation-banner-{{ block.id }}">
+<div class="afforestation-banner" id="afforestation-banner-{{ block.id }}" style="display: none;">
   <div class="banner-content">
     <span class="banner-icon" id="banner-icon-{{ block.id }}">🌳</span>
     <span class="banner-text" id="banner-text-{{ block.id }}">
-      <strong id="banner-percent-{{ block.id }}">1%</strong> of every order funds climate action
+      <strong id="banner-value-{{ block.id }}">1%</strong> of every order funds climate action
     </span>
-    <span class="banner-badge">
+    <span class="banner-badge" id="banner-badge-{{ block.id }}">
       <span class="banner-brand">Afforestation</span>
     </span>
   </div>
@@ -21,7 +21,8 @@
     const banner = document.getElementById('afforestation-banner-' + blockId);
     const iconEl = document.getElementById('banner-icon-' + blockId);
     const textEl = document.getElementById('banner-text-' + blockId);
-    const percentEl = document.getElementById('banner-percent-' + blockId);
+    const valueEl = document.getElementById('banner-value-' + blockId);
+    const badgeEl = document.getElementById('banner-badge-' + blockId);
     
     async function loadSettings() {
       try {
@@ -31,9 +32,34 @@
         const data = await response.json();
         const s = data.settings || {};
         
-        // Apply styling
+        // Check if banner is enabled
+        if (s.bannerEnabled === false) {
+          banner.style.display = 'none';
+          return;
+        }
+        
+        // Show banner
+        banner.style.display = 'block';
+        
+        // Apply styling based on style
+        let padding = '10px 20px';
+        let fontSize = '14px';
+        let fontWeight = '400';
+        
+        if (s.bannerStyle === 'compact') {
+          padding = '6px 16px';
+          fontSize = '13px';
+        } else if (s.bannerStyle === 'bold') {
+          padding = '14px 24px';
+          fontSize = '16px';
+          fontWeight = '600';
+        }
+        
         banner.style.setProperty('--banner-bg', s.primaryColor || '#2d5a27');
         banner.style.setProperty('--banner-text', '#ffffff');
+        banner.style.padding = padding;
+        banner.style.fontSize = fontSize;
+        banner.style.fontWeight = fontWeight;
         
         // Update icon based on impact type
         if (s.impactType === 'carbon') {
@@ -41,20 +67,33 @@
         } else if (s.impactType === 'both') {
           iconEl.textContent = '🌍';
         } else {
-          iconEl.textContent = s.treeEmoji || '🌳';
+          iconEl.textContent = s.bannerIcon || s.treeEmoji || '🌳';
         }
         
-        // Update text based on trigger type
+        // Update message
+        let message = s.bannerMessage || '{percent}% of every order funds climate action';
+        
         if (s.triggerType === 'percentage') {
-          percentEl.textContent = s.triggerValue + '%';
+          message = message.replace('{percent}', s.triggerValue || '1');
+          message = message.replace('{count}', s.triggerValue || '1');
         } else if (s.triggerType === 'fixed') {
-          textEl.innerHTML = '<strong>' + s.triggerValue + ' tree' + (s.triggerValue > 1 ? 's' : '') + '</strong> planted with every order';
-        } else {
-          textEl.innerHTML = '<strong>1 tree</strong> for every $' + s.triggerValue + ' spent';
+          const count = s.triggerValue || 1;
+          message = count + ' tree' + (count > 1 ? 's' : '') + ' planted with every order';
+        } else if (s.triggerType === 'threshold') {
+          message = '1 tree for every $' + (s.triggerValue || 50) + ' spent';
+        }
+        
+        textEl.innerHTML = message;
+        
+        // Show/hide branding
+        if (s.showBannerBranding === false) {
+          badgeEl.style.display = 'none';
         }
         
       } catch (error) {
         console.warn('Afforestation: Could not load settings', error);
+        // Show default banner on error
+        banner.style.display = 'block';
       }
     }
     

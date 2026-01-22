@@ -3,18 +3,18 @@
   Shows total impact and links to virtual forest
 {% endcomment %}
 
-<div class="afforestation-footer-badge" id="afforestation-footer-{{ block.id }}">
-  <div class="footer-badge-content">
-    <div class="footer-badge-icon">
+<div class="afforestation-footer-badge" id="afforestation-footer-{{ block.id }}" style="display: none;">
+  <div class="footer-badge-content" id="footer-content-{{ block.id }}">
+    <div class="footer-badge-icon" id="footer-icon-wrap-{{ block.id }}">
       <span id="footer-icon-{{ block.id }}">🌳</span>
     </div>
-    <div class="footer-badge-stats">
+    <div class="footer-badge-stats" id="footer-stats-{{ block.id }}">
       <div class="footer-stat">
         <span class="footer-stat-value" id="footer-trees-{{ block.id }}">0</span>
-        <span class="footer-stat-label">trees</span>
+        <span class="footer-stat-label" id="footer-label-{{ block.id }}">trees planted</span>
       </div>
     </div>
-    <div class="footer-badge-brand">
+    <div class="footer-badge-brand" id="footer-brand-{{ block.id }}">
       <span class="footer-brand">Afforestation</span>
     </div>
   </div>
@@ -24,8 +24,13 @@
   (function() {
     const blockId = '{{ block.id }}';
     const badge = document.getElementById('afforestation-footer-' + blockId);
+    const content = document.getElementById('footer-content-' + blockId);
+    const iconWrap = document.getElementById('footer-icon-wrap-' + blockId);
     const iconEl = document.getElementById('footer-icon-' + blockId);
     const treesEl = document.getElementById('footer-trees-' + blockId);
+    const labelEl = document.getElementById('footer-label-' + blockId);
+    const statsEl = document.getElementById('footer-stats-' + blockId);
+    const brandEl = document.getElementById('footer-brand-' + blockId);
     
     async function loadData() {
       try {
@@ -35,18 +40,64 @@
         const data = await response.json();
         const s = data.settings || {};
         
+        // Check if footer is enabled
+        if (s.footerEnabled === false) {
+          badge.style.display = 'none';
+          return;
+        }
+        
+        // Show badge
+        badge.style.display = 'inline-flex';
+        
         // Apply styling
         badge.style.setProperty('--footer-primary', s.primaryColor || '#2d5a27');
         badge.style.setProperty('--footer-bg', s.backgroundColor || '#f0fdf4');
+        badge.style.setProperty('--footer-border', s.borderColor || 'rgba(45, 90, 39, 0.2)');
         
         // Update icon
         iconEl.textContent = s.treeEmoji || '🌳';
+        
+        // Apply style variations
+        if (s.footerStyle === 'minimal') {
+          badge.style.padding = '6px 12px';
+          labelEl.style.display = 'none';
+          brandEl.style.display = 'none';
+        } else if (s.footerStyle === 'detailed') {
+          iconEl.style.fontSize = '24px';
+          treesEl.style.fontSize = '18px';
+        } else {
+          // standard
+          iconEl.style.fontSize = '20px';
+        }
+        
+        // Apply layout
+        if (s.footerLayout === 'stacked') {
+          content.style.flexDirection = 'column';
+          content.style.gap = '4px';
+          statsEl.style.flexDirection = 'column';
+          statsEl.style.alignItems = 'center';
+        }
+        
+        // Animation
+        if (s.showFooterAnimation === false) {
+          iconWrap.style.animation = 'none';
+        }
+        
+        // Branding
+        if (s.showFooterBranding === false || s.footerStyle !== 'detailed') {
+          brandEl.style.display = 'none';
+        }
+        
+        // Update label
+        labelEl.textContent = s.footerMessage || 'trees planted';
         
         // Animate count
         animateCount(treesEl, data.treesPlanted || 0);
         
       } catch (error) {
         console.warn('Afforestation: Could not load data', error);
+        // Show default badge on error
+        badge.style.display = 'inline-flex';
       }
     }
     
@@ -99,10 +150,11 @@
   .afforestation-footer-badge {
     --footer-primary: #2d5a27;
     --footer-bg: #f0fdf4;
+    --footer-border: rgba(45, 90, 39, 0.2);
     
     display: inline-flex;
     background: var(--footer-bg);
-    border: 1px solid rgba(45, 90, 39, 0.2);
+    border: 1px solid var(--footer-border);
     border-radius: 8px;
     padding: 8px 16px;
     transition: all 0.3s ease;

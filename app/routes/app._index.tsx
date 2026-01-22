@@ -45,6 +45,10 @@ interface Settings {
   isPaused: boolean
   notifyOnLimit: boolean
   autoResumeMonthly: boolean
+  // Loyalty settings
+  loyaltyEnabled: boolean
+  pointsPerTree: number
+  loyaltyApiKey: string | null
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -59,6 +63,10 @@ const DEFAULT_SETTINGS: Settings = {
   isPaused: false,
   notifyOnLimit: true,
   autoResumeMonthly: true,
+  // Loyalty defaults
+  loyaltyEnabled: false,
+  pointsPerTree: 200,
+  loyaltyApiKey: null,
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -128,6 +136,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       isPaused: settings.isPaused ?? false,
       notifyOnLimit: settings.notifyOnLimit ?? true,
       autoResumeMonthly: settings.autoResumeMonthly ?? true,
+      // Loyalty settings
+      loyaltyEnabled: settings.loyaltyEnabled ?? false,
+      pointsPerTree: settings.pointsPerTree ?? 200,
+      loyaltyApiKey: settings.loyaltyApiKey ?? null,
     },
     impact, 
     shopId: shopRecord.id,
@@ -200,6 +212,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({ success: true, message: "Monthly spending reset" })
   }
 
+  if (actionType === "updateLoyaltySettings") {
+    const loyaltyEnabled = formData.get("loyaltyEnabled") === "true"
+    const pointsPerTree = parseInt(formData.get("pointsPerTree") as string) || 200
+
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: { 
+        loyaltyEnabled,
+        pointsPerTree,
+      },
+    })
+
+    return json({ success: true, message: "Loyalty settings saved!" })
+  }
+
+  if (actionType === "generateApiKey") {
+    const crypto = await import("crypto")
+    const apiKey = `aff_${crypto.randomBytes(24).toString("hex")}`
+
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: { loyaltyApiKey: apiKey },
+    })
+
+    return json({ success: true, apiKey, message: "API key generated!" })
+  }
+
+  if (actionType === "revokeApiKey") {
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: { loyaltyApiKey: null },
+    })
+
+    return json({ success: true, message: "API key revoked" })
+  }
+
   return json({ success: false })
 }
 
@@ -221,6 +269,9 @@ export default function Index() {
     }
     if (fetcher.data?.isPaused !== undefined) {
       setSettings(prev => ({ ...prev, isPaused: fetcher.data.isPaused }))
+    }
+    if (fetcher.data?.apiKey) {
+      setSettings(prev => ({ ...prev, loyaltyApiKey: fetcher.data.apiKey }))
     }
   }, [fetcher.data, shopify])
 
@@ -318,8 +369,8 @@ export default function Index() {
                     >
                       {settings.isPaused ? "▶️ Resume" : "⏸️ Pause"}
                     </Button>
-                    <Button url="/app/additional">
-                      ⚙️ Customize Widgets
+                    <Button url="/app/widgets">
+                      🌳 Impact Widgets
                     </Button>
                   </ButtonGroup>
                 </InlineStack>
@@ -529,15 +580,137 @@ export default function Index() {
           </Layout.Section>
         </Layout>
 
+        {/* Loyalty Integration */}
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <div>
+                    <Text as="h2" variant="headingMd">🏆 Loyalty App Integration</Text>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      Let customers redeem loyalty points for tree planting.
+                    </Text>
+                  </div>
+                  <Badge tone={settings.loyaltyEnabled ? "success" : "attention"}>
+                    {settings.loyaltyEnabled ? "Enabled" : "Disabled"}
+                  </Badge>
+                </InlineStack>
+                <Divider />
+
+                <InlineStack gap="400" wrap={false}>
+                  <Box width="50%">
+                    <BlockStack gap="300">
+                      <Checkbox
+                        label="Enable Loyalty Integration"
+                        checked={settings.loyaltyEnabled}
+                        onChange={(v) => {
+                          updateSetting("loyaltyEnabled", v)
+                          // Auto-save this setting
+                          const formData = new FormData()
+                          formData.append("action", "updateLoyaltySettings")
+                          formData.append("loyaltyEnabled", v.toString())
+                          formData.append("pointsPerTree", settings.pointsPerTree.toString())
+                          fetcher.submit(formData, { method: "POST" })
+                        }}
+                      />
+                      <TextField
+                        label="Points Per Tree"
+                        type="number"
+                        value={settings.pointsPerTree.toString()}
+                        onChange={(v) => updateSetting("pointsPerTree", parseInt(v) || 200)}
+                        helpText="How many loyalty points = 1 tree planted"
+                        autoComplete="off"
+                        disabled={!settings.loyaltyEnabled}
+                      />
+                      {settings.loyaltyEnabled && (
+                        <Button
+                          onClick={() => {
+                            const formData = new FormData()
+                            formData.append("action", "updateLoyaltySettings")
+                            formData.append("loyaltyEnabled", settings.loyaltyEnabled.toString())
+                            formData.append("pointsPerTree", settings.pointsPerTree.toString())
+                            fetcher.submit(formData, { method: "POST" })
+                          }}
+                          loading={isSaving}
+                        >
+                          Save Points Setting
+                        </Button>
+                      )}
+                    </BlockStack>
+                  </Box>
+                  <Box width="50%">
+                    <BlockStack gap="300">
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">API Key</Text>
+                      {settings.loyaltyApiKey ? (
+                        <BlockStack gap="200">
+                          <TextField
+                            label=""
+                            value={settings.loyaltyApiKey}
+                            readOnly
+                            autoComplete="off"
+                          />
+                          <Button
+                            tone="critical"
+                            onClick={() => {
+                              const formData = new FormData()
+                              formData.append("action", "revokeApiKey")
+                              fetcher.submit(formData, { method: "POST" })
+                              updateSetting("loyaltyApiKey", null)
+                            }}
+                          >
+                            Revoke API Key
+                          </Button>
+                        </BlockStack>
+                      ) : (
+                        <BlockStack gap="200">
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Generate an API key for loyalty apps to call our redemption endpoints.
+                          </Text>
+                          <Button
+                            onClick={() => {
+                              const formData = new FormData()
+                              formData.append("action", "generateApiKey")
+                              fetcher.submit(formData, { method: "POST" })
+                            }}
+                            loading={isSaving}
+                            disabled={!settings.loyaltyEnabled}
+                          >
+                            Generate API Key
+                          </Button>
+                        </BlockStack>
+                      )}
+                    </BlockStack>
+                  </Box>
+                </InlineStack>
+
+                {settings.loyaltyEnabled && (
+                  <Banner tone="info">
+                    <p>
+                      <strong>API Endpoints:</strong><br />
+                      POST /api/loyalty/redeem - Redeem points for trees<br />
+                      GET /api/loyalty/rates - Get redemption rates<br />
+                      GET /api/loyalty/impact/:customerId - Customer impact history
+                    </p>
+                  </Banner>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+
         {/* Save Button */}
         <Layout>
           <Layout.Section>
             <InlineStack align="end" gap="300">
+              <Button url="/app/widgets">
+                🌳 View Impact Widgets
+              </Button>
               <Button url="/app/additional">
-                Customize Store Widgets
+                ⚙️ Customize Styles
               </Button>
               <Button variant="primary" onClick={handleSave} loading={isSaving}>
-                Save All Settings
+                💾 Save All Settings
               </Button>
             </InlineStack>
           </Layout.Section>

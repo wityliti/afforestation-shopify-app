@@ -36,12 +36,35 @@ interface WidgetSettings {
   animationType: string
   treeEmoji: string
   showTreeCount: boolean
-  customMessage: string
+  impactMessage: string
   forestTheme: string
   forestBackground: string
   showCo2Stats: boolean
   forestTitle: string
   forestSubtitle: string
+  // Banner settings
+  bannerEnabled: boolean
+  bannerMessage: string
+  bannerStyle: string
+  showBannerBranding: boolean
+  bannerIcon: string
+  // Footer settings
+  footerEnabled: boolean
+  footerStyle: string
+  footerLayout: string
+  showFooterAnimation: boolean
+  showFooterBranding: boolean
+  footerMessage: string
+}
+
+// Available message variables for merchant customization
+const MESSAGE_VARIABLES = {
+  count: "Number of trees (e.g., 1, 5)",
+  s: "Plural suffix (empty or 's')",
+  kg: "CO2 in kilograms",
+  percent: "Percentage value",
+  amount: "Currency amount",
+  total: "Total trees planted"
 }
 
 const DEFAULT_SETTINGS: WidgetSettings = {
@@ -57,12 +80,25 @@ const DEFAULT_SETTINGS: WidgetSettings = {
   animationType: "pulse",
   treeEmoji: "🌳",
   showTreeCount: true,
-  customMessage: "This purchase plants {count} tree{s}!",
+  impactMessage: "This purchase plants {count} tree{s}!",
   forestTheme: "mixed",
   forestBackground: "#fdfdfd",
   showCo2Stats: true,
-  forestTitle: "Afforestation's Virtual Forest",
+  forestTitle: "Our Virtual Forest",
   forestSubtitle: "Watch our forest grow with every purchase",
+  // Banner defaults
+  bannerEnabled: true,
+  bannerMessage: "{percent}% of every order funds climate action",
+  bannerStyle: "standard",
+  showBannerBranding: true,
+  bannerIcon: "🌳",
+  // Footer defaults
+  footerEnabled: true,
+  footerStyle: "standard",
+  footerLayout: "horizontal",
+  showFooterAnimation: true,
+  showFooterBranding: true,
+  footerMessage: "{total} trees planted",
 }
 
 const THEME_PRESETS = {
@@ -121,15 +157,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request)
   const shop = session.shop
 
-  let settings = await prisma.shopifySettings.findUnique({ where: { shop } })
-  
-  if (!settings) {
-    settings = await prisma.shopifySettings.create({
+  // Ensure core settings exist
+  let coreSettings = await prisma.shopifySettings.findUnique({ where: { shop } })
+  if (!coreSettings) {
+    coreSettings = await prisma.shopifySettings.create({
       data: { shop, triggerType: "fixed", triggerValue: 1 },
     })
   }
 
-  return json({ settings, shop })
+  // Get or create widget styles
+  let widgetStyles = await prisma.shopifyWidgetStyles.findUnique({ where: { shop } })
+  if (!widgetStyles) {
+    widgetStyles = await prisma.shopifyWidgetStyles.create({
+      data: { shop },
+    })
+  }
+
+  return json({ settings: widgetStyles, coreSettings, shop })
 }
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -138,8 +182,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData()
   const actionType = formData.get("action")
 
+  // Ensure core settings exist
+  await prisma.shopifySettings.upsert({
+    where: { shop },
+    update: {},
+    create: { shop, triggerType: "fixed", triggerValue: 1 },
+  })
+
   if (actionType === "updateWidgetSettings") {
-    const widgetSettings = {
+    const widgetStyles = {
       widgetTheme: formData.get("widgetTheme") as string,
       primaryColor: formData.get("primaryColor") as string,
       secondaryColor: formData.get("secondaryColor") as string,
@@ -152,25 +203,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       animationType: formData.get("animationType") as string,
       treeEmoji: formData.get("treeEmoji") as string,
       showTreeCount: formData.get("showTreeCount") === "true",
-      customMessage: formData.get("customMessage") as string,
+      impactMessage: formData.get("impactMessage") as string,
       forestTheme: formData.get("forestTheme") as string,
       forestBackground: formData.get("forestBackground") as string,
       showCo2Stats: formData.get("showCo2Stats") === "true",
       forestTitle: formData.get("forestTitle") as string,
       forestSubtitle: formData.get("forestSubtitle") as string,
+      // Banner settings
+      bannerEnabled: formData.get("bannerEnabled") === "true",
+      bannerMessage: formData.get("bannerMessage") as string,
+      bannerStyle: formData.get("bannerStyle") as string,
+      showBannerBranding: formData.get("showBannerBranding") === "true",
+      bannerIcon: formData.get("bannerIcon") as string,
+      // Footer settings
+      footerEnabled: formData.get("footerEnabled") === "true",
+      footerStyle: formData.get("footerStyle") as string,
+      footerLayout: formData.get("footerLayout") as string,
+      showFooterAnimation: formData.get("showFooterAnimation") === "true",
+      showFooterBranding: formData.get("showFooterBranding") === "true",
+      footerMessage: formData.get("footerMessage") as string,
     }
 
-    const settings = await prisma.shopifySettings.upsert({
+    const settings = await prisma.shopifyWidgetStyles.upsert({
       where: { shop },
-      update: widgetSettings,
-      create: { shop, triggerType: "fixed", triggerValue: 1, ...widgetSettings },
+      update: widgetStyles,
+      create: { shop, ...widgetStyles },
     })
 
     return json({ settings, success: true })
   }
 
   if (actionType === "resetToDefault") {
-    const settings = await prisma.shopifySettings.update({
+    const settings = await prisma.shopifyWidgetStyles.update({
       where: { shop },
       data: DEFAULT_SETTINGS,
     })
@@ -180,7 +244,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (actionType === "applyPreset") {
     const preset = formData.get("preset") as keyof typeof THEME_PRESETS
     if (THEME_PRESETS[preset]) {
-      const settings = await prisma.shopifySettings.update({
+      const settings = await prisma.shopifyWidgetStyles.update({
         where: { shop },
         data: {
           widgetTheme: preset,
@@ -214,12 +278,25 @@ export default function WidgetCustomization() {
     animationType: initialSettings.animationType ?? DEFAULT_SETTINGS.animationType,
     treeEmoji: initialSettings.treeEmoji ?? DEFAULT_SETTINGS.treeEmoji,
     showTreeCount: initialSettings.showTreeCount ?? DEFAULT_SETTINGS.showTreeCount,
-    customMessage: initialSettings.customMessage ?? DEFAULT_SETTINGS.customMessage,
+    impactMessage: initialSettings.impactMessage ?? DEFAULT_SETTINGS.impactMessage,
     forestTheme: initialSettings.forestTheme ?? DEFAULT_SETTINGS.forestTheme,
     forestBackground: initialSettings.forestBackground ?? DEFAULT_SETTINGS.forestBackground,
     showCo2Stats: initialSettings.showCo2Stats ?? DEFAULT_SETTINGS.showCo2Stats,
     forestTitle: initialSettings.forestTitle ?? DEFAULT_SETTINGS.forestTitle,
     forestSubtitle: initialSettings.forestSubtitle ?? DEFAULT_SETTINGS.forestSubtitle,
+    // Banner settings
+    bannerEnabled: initialSettings.bannerEnabled ?? DEFAULT_SETTINGS.bannerEnabled,
+    bannerMessage: initialSettings.bannerMessage ?? DEFAULT_SETTINGS.bannerMessage,
+    bannerStyle: initialSettings.bannerStyle ?? DEFAULT_SETTINGS.bannerStyle,
+    showBannerBranding: initialSettings.showBannerBranding ?? DEFAULT_SETTINGS.showBannerBranding,
+    bannerIcon: initialSettings.bannerIcon ?? DEFAULT_SETTINGS.bannerIcon,
+    // Footer settings
+    footerEnabled: initialSettings.footerEnabled ?? DEFAULT_SETTINGS.footerEnabled,
+    footerStyle: initialSettings.footerStyle ?? DEFAULT_SETTINGS.footerStyle,
+    footerLayout: initialSettings.footerLayout ?? DEFAULT_SETTINGS.footerLayout,
+    showFooterAnimation: initialSettings.showFooterAnimation ?? DEFAULT_SETTINGS.showFooterAnimation,
+    showFooterBranding: initialSettings.showFooterBranding ?? DEFAULT_SETTINGS.showFooterBranding,
+    footerMessage: initialSettings.footerMessage ?? DEFAULT_SETTINGS.footerMessage,
   })
 
   const isSaving = fetcher.state !== "idle"
@@ -270,6 +347,8 @@ export default function WidgetCustomization() {
 
   const tabs = [
     { id: "impact-widget", content: "Impact Widget", panelID: "impact-widget-panel" },
+    { id: "announcement-banner", content: "Announcement Banner", panelID: "banner-panel" },
+    { id: "footer-badge", content: "Footer Badge", panelID: "footer-panel" },
     { id: "virtual-forest", content: "Virtual Forest", panelID: "virtual-forest-panel" },
     { id: "theme-presets", content: "Theme Presets", panelID: "theme-presets-panel" },
   ]
@@ -324,12 +403,15 @@ export default function WidgetCustomization() {
                             onChange={(v) => updateSetting("treeEmoji", v)}
                           />
                           <TextField
-                            label="Custom Message"
-                            value={settings.customMessage}
-                            onChange={(v) => updateSetting("customMessage", v)}
-                            helpText="Use {count} for tree count and {s} for plural"
+                            label="Widget Message"
+                            value={settings.impactMessage}
+                            onChange={(v) => updateSetting("impactMessage", v)}
+                            helpText="Variables: {count}=trees, {s}=plural, {kg}=CO2, {total}=total planted"
                             autoComplete="off"
                           />
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Write in any language! Examples: "1 tree planted" • "1 arbre planté" • "1本の木"
+                          </Text>
                           <Checkbox
                             label="Show tree count in widget"
                             checked={settings.showTreeCount}
@@ -423,8 +505,193 @@ export default function WidgetCustomization() {
                   </BlockStack>
                 )}
 
-                {/* Virtual Forest Tab */}
+                {/* Announcement Banner Tab */}
                 {selectedTab === 1 && (
+                  <BlockStack gap="400">
+                    <Text as="h3" variant="headingMd">Announcement Banner Settings</Text>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      Display a banner at the top of your store showing your climate commitment.
+                    </Text>
+                    <Divider />
+
+                    <Layout>
+                      <Layout.Section variant="oneHalf">
+                        <BlockStack gap="300">
+                          <Checkbox
+                            label="Enable announcement banner"
+                            checked={settings.bannerEnabled}
+                            onChange={(v) => updateSetting("bannerEnabled", v)}
+                          />
+                          <Select
+                            label="Banner Icon"
+                            options={TREE_EMOJIS.map(e => ({ label: e + " " + e + " " + e, value: e }))}
+                            value={settings.bannerIcon}
+                            onChange={(v) => updateSetting("bannerIcon", v)}
+                          />
+                          <TextField
+                            label="Banner Message"
+                            value={settings.bannerMessage}
+                            onChange={(v) => updateSetting("bannerMessage", v)}
+                            helpText="Variables: {percent}=%, {count}=trees, {amount}=currency"
+                            autoComplete="off"
+                          />
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Write in any language! Example: "{percent}% pour l'environnement"
+                          </Text>
+                        </BlockStack>
+                      </Layout.Section>
+                      <Layout.Section variant="oneHalf">
+                        <BlockStack gap="300">
+                          <Select
+                            label="Banner Style"
+                            options={[
+                              { label: "Standard", value: "standard" },
+                              { label: "Compact", value: "compact" },
+                              { label: "Bold", value: "bold" },
+                            ]}
+                            value={settings.bannerStyle}
+                            onChange={(v) => updateSetting("bannerStyle", v)}
+                          />
+                          <Checkbox
+                            label="Show Afforestation branding"
+                            checked={settings.showBannerBranding}
+                            onChange={(v) => updateSetting("showBannerBranding", v)}
+                          />
+                        </BlockStack>
+                      </Layout.Section>
+                    </Layout>
+
+                    <Divider />
+                    <Text as="h3" variant="headingMd">Banner Colors</Text>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      The banner uses your primary color as the background with white text.
+                    </Text>
+                    <Layout>
+                      <Layout.Section variant="oneHalf">
+                        <TextField
+                          label="Background Color (Primary)"
+                          type="text"
+                          value={settings.primaryColor}
+                          onChange={(v) => updateSetting("primaryColor", v)}
+                          prefix={
+                            <div style={{ width: 20, height: 20, background: settings.primaryColor, borderRadius: 4, border: "1px solid #ccc" }} />
+                          }
+                          autoComplete="off"
+                        />
+                      </Layout.Section>
+                    </Layout>
+                  </BlockStack>
+                )}
+
+                {/* Footer Badge Tab */}
+                {selectedTab === 2 && (
+                  <BlockStack gap="400">
+                    <Text as="h3" variant="headingMd">Footer Badge Settings</Text>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      A compact badge showing your total trees planted, perfect for the store footer.
+                    </Text>
+                    <Divider />
+
+                    <Layout>
+                      <Layout.Section variant="oneHalf">
+                        <BlockStack gap="300">
+                          <Checkbox
+                            label="Enable footer badge"
+                            checked={settings.footerEnabled}
+                            onChange={(v) => updateSetting("footerEnabled", v)}
+                          />
+                          <TextField
+                            label="Badge Message"
+                            value={settings.footerMessage}
+                            onChange={(v) => updateSetting("footerMessage", v)}
+                            helpText="Variables: {total}=total trees, {kg}=CO2 offset"
+                            autoComplete="off"
+                          />
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Write in any language! Example: "{total} arbres plantés"
+                          </Text>
+                          <Select
+                            label="Badge Style"
+                            options={[
+                              { label: "Minimal (icon + count)", value: "minimal" },
+                              { label: "Standard (with label)", value: "standard" },
+                              { label: "Detailed (with branding)", value: "detailed" },
+                            ]}
+                            value={settings.footerStyle}
+                            onChange={(v) => updateSetting("footerStyle", v)}
+                          />
+                        </BlockStack>
+                      </Layout.Section>
+                      <Layout.Section variant="oneHalf">
+                        <BlockStack gap="300">
+                          <Select
+                            label="Layout"
+                            options={[
+                              { label: "Horizontal", value: "horizontal" },
+                              { label: "Stacked", value: "stacked" },
+                            ]}
+                            value={settings.footerLayout}
+                            onChange={(v) => updateSetting("footerLayout", v)}
+                          />
+                          <Checkbox
+                            label="Enable hover animation"
+                            checked={settings.showFooterAnimation}
+                            onChange={(v) => updateSetting("showFooterAnimation", v)}
+                          />
+                          <Checkbox
+                            label="Show Afforestation branding"
+                            checked={settings.showFooterBranding}
+                            onChange={(v) => updateSetting("showFooterBranding", v)}
+                          />
+                        </BlockStack>
+                      </Layout.Section>
+                    </Layout>
+
+                    <Divider />
+                    <Text as="h3" variant="headingMd">Badge Colors</Text>
+                    <Layout>
+                      <Layout.Section variant="oneThird">
+                        <TextField
+                          label="Background"
+                          type="text"
+                          value={settings.backgroundColor}
+                          onChange={(v) => updateSetting("backgroundColor", v)}
+                          prefix={
+                            <div style={{ width: 20, height: 20, background: settings.backgroundColor, borderRadius: 4, border: "1px solid #ccc" }} />
+                          }
+                          autoComplete="off"
+                        />
+                      </Layout.Section>
+                      <Layout.Section variant="oneThird">
+                        <TextField
+                          label="Text Color"
+                          type="text"
+                          value={settings.primaryColor}
+                          onChange={(v) => updateSetting("primaryColor", v)}
+                          prefix={
+                            <div style={{ width: 20, height: 20, background: settings.primaryColor, borderRadius: 4, border: "1px solid #ccc" }} />
+                          }
+                          autoComplete="off"
+                        />
+                      </Layout.Section>
+                      <Layout.Section variant="oneThird">
+                        <TextField
+                          label="Border Color"
+                          type="text"
+                          value={settings.borderColor}
+                          onChange={(v) => updateSetting("borderColor", v)}
+                          prefix={
+                            <div style={{ width: 20, height: 20, background: settings.borderColor, borderRadius: 4, border: "1px solid #ccc" }} />
+                          }
+                          autoComplete="off"
+                        />
+                      </Layout.Section>
+                    </Layout>
+                  </BlockStack>
+                )}
+
+                {/* Virtual Forest Tab */}
+                {selectedTab === 3 && (
                   <BlockStack gap="400">
                     <Text as="h3" variant="headingMd">Virtual Forest Settings</Text>
                     <Text as="p" variant="bodyMd" tone="subdued">
@@ -513,7 +780,7 @@ export default function WidgetCustomization() {
                 )}
 
                 {/* Theme Presets Tab */}
-                {selectedTab === 2 && (
+                {selectedTab === 4 && (
                   <BlockStack gap="400">
                     <Text as="h3" variant="headingMd">Theme Presets</Text>
                     <Text as="p" variant="bodyMd" tone="subdued">
@@ -609,26 +876,35 @@ export default function WidgetCustomization() {
                 </div>
 
                 {/* Announcement Banner Preview */}
-                <div style={{
-                  background: settings.primaryColor,
-                  color: "#fff",
-                  padding: "10px 20px",
-                  textAlign: "center",
-                  fontSize: "14px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "12px",
-                }}>
-                  <span>{settings.treeEmoji}</span>
-                  <span><strong>1%</strong> of every order funds climate action</span>
-                  <span style={{ 
-                    background: "rgba(255,255,255,0.2)", 
-                    padding: "4px 10px", 
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                  }}>Afforestation</span>
-                </div>
+                {settings.bannerEnabled && (
+                  <div style={{
+                    background: settings.primaryColor,
+                    color: "#fff",
+                    padding: settings.bannerStyle === "compact" ? "6px 16px" : settings.bannerStyle === "bold" ? "14px 24px" : "10px 20px",
+                    textAlign: "center",
+                    fontSize: settings.bannerStyle === "bold" ? "16px" : "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "12px",
+                    fontWeight: settings.bannerStyle === "bold" ? 600 : 400,
+                  }}>
+                    <span style={{ fontSize: settings.bannerStyle === "bold" ? "20px" : "18px" }}>{settings.bannerIcon}</span>
+                    <span>
+                      {settings.bannerMessage
+                        .replace("{percent}", "1")
+                        .replace("{count}", "1")}
+                    </span>
+                    {settings.showBannerBranding && (
+                      <span style={{ 
+                        background: "rgba(255,255,255,0.2)", 
+                        padding: "4px 10px", 
+                        borderRadius: "20px",
+                        fontSize: "12px",
+                      }}>Afforestation</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Product Page Simulation */}
                 <div style={{ 
@@ -693,7 +969,7 @@ export default function WidgetCustomization() {
                         {settings.treeEmoji}
                       </span>
                       <span style={{ color: settings.textColor, fontSize: "14px" }}>
-                        {settings.customMessage
+                        {settings.impactMessage
                           .replace("{count}", "1")
                           .replace("{s}", "")}
                       </span>
@@ -785,19 +1061,38 @@ export default function WidgetCustomization() {
                   <div style={{ fontSize: "14px", color: "#6b7280" }}>
                     © 2026 Your Store. All rights reserved.
                   </div>
-                  <div style={{
-                    background: settings.backgroundColor,
-                    border: `1px solid ${settings.borderColor}`,
-                    borderRadius: "8px",
-                    padding: "8px 16px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}>
-                    <span style={{ fontSize: "20px" }}>{settings.treeEmoji}</span>
-                    <span style={{ fontWeight: "bold", color: settings.primaryColor }}>127</span>
-                    <span style={{ fontSize: "12px", color: settings.textColor }}>trees</span>
-                  </div>
+                  {settings.footerEnabled && (
+                    <div style={{
+                      background: settings.backgroundColor,
+                      border: `1px solid ${settings.borderColor}`,
+                      borderRadius: "8px",
+                      padding: settings.footerStyle === "minimal" ? "6px 12px" : "8px 16px",
+                      display: "flex",
+                      flexDirection: settings.footerLayout === "stacked" ? "column" : "row",
+                      alignItems: "center",
+                      gap: settings.footerLayout === "stacked" ? "4px" : "8px",
+                      transition: settings.showFooterAnimation ? "all 0.3s ease" : "none",
+                    }}>
+                      <span style={{ 
+                        fontSize: settings.footerStyle === "detailed" ? "24px" : "20px",
+                        animation: settings.showFooterAnimation ? "gentle-bounce 2s ease-in-out infinite" : "none",
+                      }}>{settings.treeEmoji}</span>
+                      <div style={{ 
+                        display: "flex", 
+                        flexDirection: settings.footerLayout === "stacked" ? "column" : "row",
+                        alignItems: "center",
+                        gap: settings.footerLayout === "stacked" ? "2px" : "4px",
+                      }}>
+                        <span style={{ fontWeight: "bold", color: settings.primaryColor, fontSize: settings.footerStyle === "detailed" ? "18px" : "16px" }}>127</span>
+                        {settings.footerStyle !== "minimal" && (
+                          <span style={{ fontSize: "12px", color: settings.textColor, opacity: 0.8 }}>{settings.footerMessage}</span>
+                        )}
+                      </div>
+                      {settings.footerStyle === "detailed" && settings.showFooterBranding && (
+                        <span style={{ fontSize: "10px", color: settings.primaryColor, opacity: 0.6, fontWeight: 600 }}>Afforestation</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -809,6 +1104,10 @@ export default function WidgetCustomization() {
                 @keyframes bounce {
                   0%, 100% { transform: translateY(0); }
                   50% { transform: translateY(-4px); }
+                }
+                @keyframes gentle-bounce {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-3px); }
                 }
               `}</style>
             </BlockStack>

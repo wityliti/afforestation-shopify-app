@@ -24,7 +24,8 @@ export default function App() {
         <Link to="/app" rel="home">
           Dashboard
         </Link>
-        <Link to="/app/additional">Widget Customization</Link>
+        <Link to="/app/widgets">Impact Widgets</Link>
+        <Link to="/app/additional">Customize Styles</Link>
         <Link to="/app/link-account">Link Account</Link>
       </NavMenu>
       <Outlet />

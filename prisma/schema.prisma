@@ -15,7 +15,6 @@ datasource db {
 }
 
 // Shopify OAuth Session Storage
-// Renamed with shopify_ prefix to avoid conflicts with main app tables
 model ShopifySession {
   id                  String    @id
   shop                String
@@ -38,63 +37,130 @@ model ShopifySession {
   @@map("shopify_session")
 }
 
-// Shopify App Settings per Shop
+// Shopify App Core Settings - lean model for business logic
 model ShopifySettings {
-  id           String   @id @default(cuid())
-  shop         String   @unique
-  triggerType  String   @default("fixed") // "fixed" per order, "percentage" of order, "threshold" per spend
-  triggerValue Float    @default(1) // number of trees, percentage, or threshold amount
-  isEnabled    Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Impact Type and Cost Settings
-  impactType          String   @default("trees") @map("impact_type") // trees, carbon, both
-  costPerTree         Float    @default(0.50) @map("cost_per_tree")
-  costPerKgCo2        Float    @default(0.20) @map("cost_per_kg_co2")
+  id              String   @id @default(cuid())
+  shop            String   @unique
+  isEnabled       Boolean  @default(true)
+  triggerType     String   @default("fixed") // "fixed", "percentage", "threshold"
+  triggerValue    Float    @default(1)
+  impactType      String   @default("trees") @map("impact_type") // trees, carbon, both
+  costPerTree     Float    @default(0.50) @map("cost_per_tree")
+  costPerKgCo2    Float    @default(0.20) @map("cost_per_kg_co2")
+  monthlyLimit    Float?   @map("monthly_limit")
+  monthlySpent    Float    @default(0) @map("monthly_spent")
+  isPaused        Boolean  @default(false) @map("is_paused")
+  notifyOnLimit   Boolean  @default(true) @map("notify_on_limit")
+  autoResumeMonthly Boolean @default(true) @map("auto_resume_monthly")
   
-  // Spending Limits and Controls
-  monthlyLimit        Float?   @map("monthly_limit") // null = unlimited
-  monthlySpent        Float    @default(0) @map("monthly_spent")
-  isPaused            Boolean  @default(false) @map("is_paused")
-  notifyOnLimit       Boolean  @default(true) @map("notify_on_limit")
-  autoResumeMonthly   Boolean  @default(true) @map("auto_resume_monthly")
-
-  // Widget Customization Settings
-  widgetTheme         String  @default("light") @map("widget_theme") // light, dark, custom
-  primaryColor        String  @default("#2d5a27") @map("primary_color")
-  secondaryColor      String  @default("#4ade80") @map("secondary_color")
-  backgroundColor     String  @default("#f0f9f0") @map("background_color")
-  textColor           String  @default("#1a1a1a") @map("text_color")
-  borderRadius        String  @default("rounded") @map("border_radius") // rounded, sharp, pill
-  borderColor         String  @default("#d4edda") @map("border_color")
-  fontFamily          String  @default("inherit") @map("font_family")
-  showAnimation       Boolean @default(true) @map("show_animation")
-  animationType       String  @default("pulse") @map("animation_type") // pulse, bounce, none
-  treeEmoji           String  @default("🌳") @map("tree_emoji")
-  showTreeCount       Boolean @default(true) @map("show_tree_count")
-  customMessage       String  @default("This purchase plants {count} tree{s}!") @map("custom_message")
+  // Loyalty settings
+  loyaltyEnabled     Boolean @default(false) @map("loyalty_enabled")
+  pointsPerTree      Int     @default(200) @map("points_per_tree")
+  loyaltyApiKey      String? @map("loyalty_api_key")
   
-  // Virtual Forest Settings
-  forestTheme         String  @default("mixed") @map("forest_theme") // mixed, pine, deciduous, tropical
-  forestBackground    String  @default("#fdfdfd") @map("forest_background")
-  showCo2Stats        Boolean @default(true) @map("show_co2_stats")
-  forestTitle         String  @default("Our Virtual Forest") @map("forest_title")
-  forestSubtitle      String  @default("Watch our forest grow with every purchase") @map("forest_subtitle")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Relation to ShopifyShop
-  shopifyShop ShopifyShop? @relation(fields: [shop], references: [shopDomain])
+  // Relations
+  widgetStyles    ShopifyWidgetStyles?
+  shopifyShop     ShopifyShop? @relation(fields: [shop], references: [shopDomain])
 
   @@map("shopify_settings")
 }
 
+// Shopify Widget Styles - all customization settings
+model ShopifyWidgetStyles {
+  id              String   @id @default(cuid())
+  shop            String   @unique
+  
+  // Theme & Colors
+  widgetTheme     String   @default("light") @map("widget_theme")
+  primaryColor    String   @default("#2d5a27") @map("primary_color")
+  secondaryColor  String   @default("#4ade80") @map("secondary_color")
+  backgroundColor String   @default("#f0fdf4") @map("background_color")
+  textColor       String   @default("#14532d") @map("text_color")
+  borderColor     String   @default("#bbf7d0") @map("border_color")
+  borderRadius    String   @default("rounded") @map("border_radius")
+  fontFamily      String   @default("inherit") @map("font_family")
+  
+  // Animation
+  showAnimation   Boolean  @default(true) @map("show_animation")
+  animationType   String   @default("pulse") @map("animation_type")
+  treeEmoji       String   @default("🌳") @map("tree_emoji")
+  
+  // Impact Widget - merchant writes their own message with variables
+  impactMessage   String   @default("This purchase plants {count} tree{s}!") @map("impact_message")
+  showTreeCount   Boolean  @default(true) @map("show_tree_count")
+  
+  // Announcement Banner - merchant writes their own message
+  bannerEnabled       Boolean @default(true) @map("banner_enabled")
+  bannerMessage       String  @default("{percent}% of every order funds climate action") @map("banner_message")
+  bannerStyle         String  @default("standard") @map("banner_style")
+  bannerIcon          String  @default("🌳") @map("banner_icon")
+  showBannerBranding  Boolean @default(true) @map("show_banner_branding")
+  
+  // Footer Badge - merchant writes their own message
+  footerEnabled       Boolean @default(true) @map("footer_enabled")
+  footerMessage       String  @default("{total} trees planted") @map("footer_message")
+  footerStyle         String  @default("standard") @map("footer_style")
+  footerLayout        String  @default("horizontal") @map("footer_layout")
+  showFooterAnimation Boolean @default(true) @map("show_footer_animation")
+  showFooterBranding  Boolean @default(true) @map("show_footer_branding")
+  
+  // Virtual Forest Page - merchant writes their own titles
+  forestTitle         String  @default("Our Virtual Forest") @map("forest_title")
+  forestSubtitle      String  @default("Watch our forest grow with every purchase") @map("forest_subtitle")
+  forestTheme         String  @default("mixed") @map("forest_theme")
+  forestBackground    String  @default("#fdfdfd") @map("forest_background")
+  showCo2Stats        Boolean @default(true) @map("show_co2_stats")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Relation
+  settings        ShopifySettings @relation(fields: [shop], references: [shop])
+  
+  @@map("shopify_widget_styles")
+}
+
+// Shopify Flow Integration Logs
+model ShopifyFlowLog {
+  id            String   @id @default(cuid())
+  shop          String
+  flowId        String   @map("flow_id")
+  actionType    String   @map("action_type") // "plant_trees", "offset_carbon"
+  treesPlanted  Int      @default(0) @map("trees_planted")
+  co2OffsetKg   Float    @default(0) @map("co2_offset_kg")
+  reason        String?  // "review_reward", "referral", "signup", "repeat_customer", "custom"
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  @@map("shopify_flow_logs")
+  @@index([shop])
+}
+
+// Shopify Loyalty Redemptions
+model ShopifyLoyaltyRedemption {
+  id            String   @id @default(cuid())
+  shop          String
+  customerId    String   @map("customer_id")
+  customerEmail String?  @map("customer_email")
+  pointsSpent   Int      @map("points_spent")
+  treesPlanted  Int      @map("trees_planted")
+  loyaltyApp    String   @map("loyalty_app") // "smile", "yotpo", "loyaltylion", etc.
+  externalId    String?  @map("external_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  @@map("shopify_loyalty_redemptions")
+  @@index([shop, customerId])
+}
+
 // Shopify Shop Registry
-// Tracks all shops that have installed the app with optional company linking
 model ShopifyShop {
   id            Int       @id @default(autoincrement())
   shopDomain    String    @unique @map("shop_domain")
   shopName      String?   @map("shop_name")
-  companyId     Int?      @map("company_id") // FK to main app's company_profiles table
+  companyId     Int?      @map("company_id")
   isActive      Boolean   @default(true) @map("is_active")
   installedAt   DateTime  @default(now()) @map("installed_at")
   uninstalledAt DateTime? @map("uninstalled_at")
@@ -107,7 +173,5 @@ model ShopifyShop {
   @@map("shopify_shops")
 }
 
-// Note: Impact tracking now uses the shared impact_ledger table
-// which is managed by the main app's SQL migrations.
-// Query impact using raw SQL or the shopify_shop_impact view:
-//   SELECT * FROM shopify_shop_impact WHERE shop_domain = 'example.myshopify.com'
+// Note: Impact tracking uses the shared impact_ledger table
+// managed by the main app's SQL migrations.
