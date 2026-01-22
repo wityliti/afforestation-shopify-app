@@ -17,7 +17,7 @@ import {
   Checkbox,
   Icon,
 } from "@shopify/polaris"
-import { ExternalIcon, PaintBrushIcon, CheckIcon } from "@shopify/polaris-icons"
+import { ExternalIcon, EditIcon, CheckIcon } from "@shopify/polaris-icons"
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react"
 import { authenticate } from "../shopify.server"
 import prisma from "../db.server"
@@ -237,7 +237,7 @@ export default function WidgetCustomization() {
                   <Box paddingBlockStart="200">
                     <Button
                       variant="primary"
-                      icon={PaintBrushIcon}
+                      icon={EditIcon}
                       url={themeEditorUrl}
                       external
                     >
