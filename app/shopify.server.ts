@@ -14,7 +14,10 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  // Use renamed session table (shopify_session) via ShopifySession model
+  sessionStorage: new PrismaSessionStorage(prisma, {
+    tableName: "shopifySession", // Prisma model name (camelCase)
+  }),
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,

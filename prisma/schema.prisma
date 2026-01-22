@@ -14,7 +14,9 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Session {
+// Shopify OAuth Session Storage
+// Renamed with shopify_ prefix to avoid conflicts with main app tables
+model ShopifySession {
   id                  String    @id
   shop                String
   state               String
@@ -32,23 +34,46 @@ model Session {
   emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+
+  @@map("shopify_session")
 }
 
-model Setting {
-  id            String   @id @default(cuid())
-  shop          String   @unique
-  triggerType   String   @default("fixed") // "fixed" per order or "threshold" per spend
-  triggerValue  Float    @default(1)       // number of trees per order or threshold amount
-  isEnabled     Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Impact {
+// Shopify App Settings per Shop
+model ShopifySettings {
   id           String   @id @default(cuid())
   shop         String   @unique
-  treesPlanted Int      @default(0)
-  co2Offset    Float    @default(0) // in kg
+  triggerType  String   @default("fixed") // "fixed" per order or "threshold" per spend
+  triggerValue Float    @default(1) // number of trees per order or threshold amount
+  isEnabled    Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Relation to ShopifyShop
+  shopifyShop ShopifyShop? @relation(fields: [shop], references: [shopDomain])
+
+  @@map("shopify_settings")
 }
+
+// Shopify Shop Registry
+// Tracks all shops that have installed the app with optional company linking
+model ShopifyShop {
+  id            Int       @id @default(autoincrement())
+  shopDomain    String    @unique @map("shop_domain")
+  shopName      String?   @map("shop_name")
+  companyId     Int?      @map("company_id") // FK to main app's company_profiles table
+  isActive      Boolean   @default(true) @map("is_active")
+  installedAt   DateTime  @default(now()) @map("installed_at")
+  uninstalledAt DateTime? @map("uninstalled_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relation to settings
+  settings ShopifySettings?
+
+  @@map("shopify_shops")
+}
+
+// Note: Impact tracking now uses the shared impact_ledger table
+// which is managed by the main app's SQL migrations.
+// Query impact using raw SQL or the shopify_shop_impact view:
+//   SELECT * FROM shopify_shop_impact WHERE shop_domain = 'example.myshopify.com'
