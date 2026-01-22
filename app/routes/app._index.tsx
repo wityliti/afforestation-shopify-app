@@ -18,16 +18,9 @@ import {
   ProgressBar,
   Box,
   Checkbox,
-  Icon,
   ButtonGroup,
 } from "@shopify/polaris"
-import {
-  LeafIcon,
-  RefreshIcon,
-  PauseIcon,
-  PlayIcon,
-  SettingsIcon,
-} from "@shopify/polaris-icons"
+// Icons removed - using emoji instead for compatibility
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react"
 import { authenticate } from "../shopify.server"
 import prisma from "../db.server"
@@ -320,14 +313,13 @@ export default function Index() {
                   <Text as="h2" variant="headingLg">Your Climate Impact 🌍</Text>
                   <ButtonGroup>
                     <Button
-                      icon={settings.isPaused ? PlayIcon : PauseIcon}
                       onClick={handleTogglePause}
                       tone={settings.isPaused ? "success" : undefined}
                     >
-                      {settings.isPaused ? "Resume" : "Pause"}
+                      {settings.isPaused ? "▶️ Resume" : "⏸️ Pause"}
                     </Button>
-                    <Button url="/app/additional" icon={SettingsIcon}>
-                      Customize Widgets
+                    <Button url="/app/additional">
+                      ⚙️ Customize Widgets
                     </Button>
                   </ButtonGroup>
                 </InlineStack>
