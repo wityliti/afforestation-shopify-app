@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import { Form, Link, useLoaderData } from "@remix-run/react";
 import { useEffect, useState, useRef } from "react";
 
 import { login } from "../../shopify.server";
@@ -353,9 +353,9 @@ export default function App() {
             </a>
           </div>
           <div className={styles.footerLinks}>
-            <a href="https://afforestation.org/privacy">Privacy</a>
-            <a href="https://afforestation.org/terms">Terms</a>
-            <a href="https://afforestation.org/contact">Contact</a>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/contact">Contact</Link>
           </div>
         </footer>
       </div>
