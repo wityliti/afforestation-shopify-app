@@ -119,6 +119,9 @@ export default function App() {
             />
           </div>
           <div className={styles.logoPulse} />
+          <a href="https://afforestation.org" target="_blank" rel="noopener noreferrer" className={styles.brandName}>
+            afforestation.org
+          </a>
         </div>
 
         {/* Headline with staggered animation */}
