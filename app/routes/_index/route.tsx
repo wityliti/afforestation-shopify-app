@@ -1,9 +1,10 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import { useEffect, useState, useRef } from "react";
 
 import { login } from "../../shopify.server";
+import prisma from "../../db.server";
 
 import styles from "./styles.module.css";
 
@@ -14,7 +15,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  // Fetch real impact data from database
+  let totalTrees = 0;
+  let totalCo2 = 0;
+  let totalStores = 0;
+
+  try {
+    // Get total trees and CO2 from impact_ledger
+    const impactResult = await prisma.$queryRaw<Array<{ trees: bigint; co2: string }>>`
+      SELECT 
+        COALESCE(SUM(trees_planted), 0) as trees,
+        COALESCE(SUM(co2_offset_kg), 0) as co2
+      FROM impact_ledger
+      WHERE source_type = 'shopify'
+    `;
+    
+    if (impactResult && impactResult[0]) {
+      totalTrees = Number(impactResult[0].trees);
+      totalCo2 = Math.round(Number(impactResult[0].co2) / 1000); // Convert kg to tons
+    }
+
+    // Get total active stores
+    const storesResult = await prisma.shopifyShop.count({
+      where: { isActive: true }
+    });
+    totalStores = storesResult;
+  } catch (error) {
+    console.error("Error fetching impact stats:", error);
+    // Stats will remain 0 on error
+  }
+
+  return json({ 
+    showForm: Boolean(login),
+    stats: {
+      treesPlanted: totalTrees,
+      storesConnected: totalStores,
+      co2Offset: totalCo2
+    }
+  });
 };
 
 // Animated counter hook
@@ -81,14 +119,15 @@ function FloatingParticles() {
 }
 
 export default function App() {
-  const { showForm } = useLoaderData<typeof loader>();
+  const { showForm, stats } = useLoaderData<typeof loader>();
   const [isLoaded, setIsLoaded] = useState(false);
   const [shopValue, setShopValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
-  const trees = useCountUp(1247832, 2500, 0);
-  const stores = useCountUp(523, 2000, 200);
-  const co2 = useCountUp(24968, 2200, 400);
+  // Use real data from database
+  const trees = useCountUp(stats.treesPlanted, 2500, 0);
+  const stores = useCountUp(stats.storesConnected, 2000, 200);
+  const co2 = useCountUp(stats.co2Offset, 2200, 400);
 
   useEffect(() => {
     setIsLoaded(true);
