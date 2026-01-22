@@ -1,7 +1,7 @@
-import { json } from "@remix-run/node";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useEffect } from "react";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { json } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { useEffect, useState, useCallback } from "react"
+import { useLoaderData, useFetcher } from "@remix-run/react"
 import {
   Page,
   Layout,
@@ -13,57 +13,97 @@ import {
   TextField,
   Select,
   Banner,
-  Link,
-} from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
+  Badge,
+  Divider,
+  ProgressBar,
+  Box,
+  Checkbox,
+  Icon,
+  ButtonGroup,
+} from "@shopify/polaris"
+import {
+  LeafIcon,
+  RefreshIcon,
+  PauseIcon,
+  PlayIcon,
+  SettingsIcon,
+} from "@shopify/polaris-icons"
+import { TitleBar, useAppBridge } from "@shopify/app-bridge-react"
+import { authenticate } from "../shopify.server"
+import prisma from "../db.server"
 
 interface ImpactData {
-  totalTreesPlanted: number;
-  totalCo2OffsetKg: number;
-  totalOrders: number;
-  isLinked: boolean;
-  companyId: number | null;
+  totalTreesPlanted: number
+  totalCo2OffsetKg: number
+  totalOrders: number
+  isLinked: boolean
+  companyId: number | null
+}
+
+interface Settings {
+  triggerType: string
+  triggerValue: number
+  isEnabled: boolean
+  impactType: string
+  costPerTree: number
+  costPerKgCo2: number
+  monthlyLimit: number | null
+  monthlySpent: number
+  isPaused: boolean
+  notifyOnLimit: boolean
+  autoResumeMonthly: boolean
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  triggerType: "fixed",
+  triggerValue: 1,
+  isEnabled: true,
+  impactType: "trees",
+  costPerTree: 0.50,
+  costPerKgCo2: 0.20,
+  monthlyLimit: null,
+  monthlySpent: 0,
+  isPaused: false,
+  notifyOnLimit: true,
+  autoResumeMonthly: true,
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { session } = await authenticate.admin(request)
+  const shop = session.shop
 
   // Get or create settings
-  let settings = await prisma.shopifySettings.findUnique({ where: { shop } });
+  let settings = await prisma.shopifySettings.findUnique({ where: { shop } })
   if (!settings) {
     settings = await prisma.shopifySettings.create({
       data: { shop, triggerType: "fixed", triggerValue: 1 },
-    });
+    })
   }
 
   // Get or create shop record
   let shopRecord = await prisma.shopifyShop.findUnique({
     where: { shopDomain: shop }
-  });
+  })
   if (!shopRecord) {
     shopRecord = await prisma.shopifyShop.create({
       data: { shopDomain: shop },
-    });
+    })
   }
 
-  // Query impact from the unified impact_ledger via the view
-  // Falls back to direct query if view doesn't exist yet
+  // Query impact from the unified impact_ledger
   let impact: ImpactData = {
     totalTreesPlanted: 0,
     totalCo2OffsetKg: 0,
     totalOrders: 0,
     isLinked: shopRecord.companyId !== null,
     companyId: shopRecord.companyId,
-  };
+  }
 
   try {
     const impactResult = await prisma.$queryRaw<Array<{
-      total_trees_planted: bigint | null;
-      total_co2_offset_kg: number | null;
-      total_orders: bigint | null;
+      total_trees_planted: bigint | null
+      total_co2_offset_kg: number | null
+      total_orders: bigint | null
     }>>`
       SELECT 
         COALESCE(SUM(trees_planted), 0) as total_trees_planted,
@@ -71,81 +111,194 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         COUNT(*) as total_orders
       FROM impact_ledger
       WHERE source_type = 'shopify' AND source_id = ${shopRecord.id.toString()}
-    `;
+    `
 
     if (impactResult.length > 0) {
-      impact.totalTreesPlanted = Number(impactResult[0].total_trees_planted || 0);
-      impact.totalCo2OffsetKg = Number(impactResult[0].total_co2_offset_kg || 0);
-      impact.totalOrders = Number(impactResult[0].total_orders || 0);
+      impact.totalTreesPlanted = Number(impactResult[0].total_trees_planted || 0)
+      impact.totalCo2OffsetKg = Number(impactResult[0].total_co2_offset_kg || 0)
+      impact.totalOrders = Number(impactResult[0].total_orders || 0)
     }
   } catch (error) {
-    // impact_ledger table might not exist yet
-    console.warn("Could not query impact_ledger:", error);
+    console.warn("Could not query impact_ledger:", error)
   }
 
-  return json({ settings, impact, shopId: shopRecord.id });
-};
+  return json({ 
+    settings: {
+      triggerType: settings.triggerType,
+      triggerValue: settings.triggerValue,
+      isEnabled: settings.isEnabled,
+      impactType: settings.impactType ?? "trees",
+      costPerTree: settings.costPerTree ?? 0.50,
+      costPerKgCo2: settings.costPerKgCo2 ?? 0.20,
+      monthlyLimit: settings.monthlyLimit,
+      monthlySpent: settings.monthlySpent ?? 0,
+      isPaused: settings.isPaused ?? false,
+      notifyOnLimit: settings.notifyOnLimit ?? true,
+      autoResumeMonthly: settings.autoResumeMonthly ?? true,
+    },
+    impact, 
+    shopId: shopRecord.id,
+    shopName: shop,
+  })
+}
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-  const formData = await request.formData();
-  const actionType = formData.get("action");
+  const { session } = await authenticate.admin(request)
+  const shop = session.shop
+  const formData = await request.formData()
+  const actionType = formData.get("action")
 
   if (actionType === "updateSettings") {
-    const triggerType = formData.get("triggerType") as string;
-    const triggerValue = parseFloat(formData.get("triggerValue") as string);
+    const triggerType = formData.get("triggerType") as string
+    const triggerValue = parseFloat(formData.get("triggerValue") as string) || 1
+    const impactType = formData.get("impactType") as string
+    const monthlyLimit = formData.get("monthlyLimit") 
+      ? parseFloat(formData.get("monthlyLimit") as string) 
+      : null
+    const notifyOnLimit = formData.get("notifyOnLimit") === "true"
+    const autoResumeMonthly = formData.get("autoResumeMonthly") === "true"
 
     const settings = await prisma.shopifySettings.upsert({
       where: { shop },
-      update: { triggerType, triggerValue },
-      create: { shop, triggerType, triggerValue },
-    });
+      update: { 
+        triggerType, 
+        triggerValue,
+        impactType,
+        monthlyLimit,
+        notifyOnLimit,
+        autoResumeMonthly,
+      },
+      create: { 
+        shop, 
+        triggerType, 
+        triggerValue,
+        impactType,
+        monthlyLimit,
+        notifyOnLimit,
+        autoResumeMonthly,
+      },
+    })
 
-    return json({ settings, success: true });
+    return json({ settings, success: true, message: "Settings saved!" })
   }
 
-  if (actionType === "linkAccount") {
-    const linkCode = formData.get("linkCode") as string;
+  if (actionType === "togglePause") {
+    const currentSettings = await prisma.shopifySettings.findUnique({ where: { shop } })
+    const newPausedState = !(currentSettings?.isPaused ?? false)
     
-    // TODO: Validate link code against main app's company linking system
-    // For now, just store the code and show success
-    // In production, this would make an API call to the main app to validate
-    // and retrieve the company_id
-    
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: { isPaused: newPausedState },
+    })
+
     return json({ 
-      success: false, 
-      error: "Account linking coming soon. Contact support to link your account." 
-    });
+      success: true, 
+      isPaused: newPausedState,
+      message: newPausedState ? "Impact paused" : "Impact resumed" 
+    })
   }
 
-  return json({ success: false });
-};
+  if (actionType === "resetMonthlySpent") {
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: { monthlySpent: 0 },
+    })
+
+    return json({ success: true, message: "Monthly spending reset" })
+  }
+
+  return json({ success: false })
+}
 
 export default function Index() {
-  const { settings, impact, shopId } = useLoaderData<typeof loader>();
-  const fetcher = useFetcher<typeof action>();
-  const shopify = useAppBridge();
+  const { settings: initialSettings, impact, shopId, shopName } = useLoaderData<typeof loader>()
+  const fetcher = useFetcher<typeof action>()
+  const shopify = useAppBridge()
 
-  const isSaving = fetcher.state !== "idle";
+  const [settings, setSettings] = useState<Settings>({
+    ...DEFAULT_SETTINGS,
+    ...initialSettings,
+  })
+
+  const isSaving = fetcher.state !== "idle"
 
   useEffect(() => {
     if (fetcher.data?.success) {
-      shopify.toast.show("Settings updated");
+      shopify.toast.show(fetcher.data.message || "Saved!")
     }
-    if (fetcher.data?.error) {
-      shopify.toast.show(fetcher.data.error, { isError: true });
+    if (fetcher.data?.isPaused !== undefined) {
+      setSettings(prev => ({ ...prev, isPaused: fetcher.data.isPaused }))
     }
-  }, [fetcher.data, shopify]);
+  }, [fetcher.data, shopify])
 
-  const currentTriggerType = (fetcher.formData?.get("triggerType") as string) || settings.triggerType;
-  const currentTriggerValue = (fetcher.formData?.get("triggerValue") as string) || settings.triggerValue.toString();
+  const updateSetting = useCallback(<K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  const handleSave = useCallback(() => {
+    const formData = new FormData()
+    formData.append("action", "updateSettings")
+    formData.append("triggerType", settings.triggerType)
+    formData.append("triggerValue", settings.triggerValue.toString())
+    formData.append("impactType", settings.impactType)
+    if (settings.monthlyLimit !== null) {
+      formData.append("monthlyLimit", settings.monthlyLimit.toString())
+    }
+    formData.append("notifyOnLimit", settings.notifyOnLimit.toString())
+    formData.append("autoResumeMonthly", settings.autoResumeMonthly.toString())
+    fetcher.submit(formData, { method: "POST" })
+  }, [settings, fetcher])
+
+  const handleTogglePause = useCallback(() => {
+    const formData = new FormData()
+    formData.append("action", "togglePause")
+    fetcher.submit(formData, { method: "POST" })
+  }, [fetcher])
+
+  const getTriggerLabel = () => {
+    switch (settings.triggerType) {
+      case "fixed": return "Trees per Order"
+      case "percentage": return "% of Order Value"
+      case "threshold": return "$ Spend per Tree"
+      default: return "Value"
+    }
+  }
+
+  const getTriggerHelpText = () => {
+    switch (settings.triggerType) {
+      case "fixed": return `Plant ${settings.triggerValue} tree${settings.triggerValue !== 1 ? 's' : ''} for every order`
+      case "percentage": return `Donate ${settings.triggerValue}% of each order value to plant trees`
+      case "threshold": return `Plant 1 tree for every $${settings.triggerValue} spent`
+      default: return ""
+    }
+  }
+
+  const monthlyProgress = settings.monthlyLimit 
+    ? Math.min((settings.monthlySpent / settings.monthlyLimit) * 100, 100) 
+    : 0
+
+  const estimatedCost = impact.totalTreesPlanted * settings.costPerTree + 
+    impact.totalCo2OffsetKg * settings.costPerKgCo2
 
   return (
     <Page>
       <TitleBar title="Afforestation Dashboard" />
       <BlockStack gap="500">
-        {!impact.isLinked && (
+        {/* Status Banner */}
+        {settings.isPaused && (
+          <Banner
+            title="Impact is paused"
+            tone="warning"
+            action={{
+              content: "Resume",
+              onAction: handleTogglePause,
+            }}
+          >
+            <p>Tree planting is currently paused. No trees will be planted until you resume.</p>
+          </Banner>
+        )}
+
+        {!impact.isLinked && !settings.isPaused && (
           <Banner
             title="Link your Afforestation account"
             tone="info"
@@ -153,121 +306,251 @@ export default function Index() {
               content: "Link Account",
               url: "/app/link-account",
             }}
-            secondaryAction={{
-              content: "Learn more",
-              url: "https://afforestation.com/for-business",
-              target: "_blank",
-            }}
           >
-            <p>
-              Connect your Shopify store to your Afforestation company account 
-              to include this impact in your company's ESG dashboard and reports.
-            </p>
+            <p>Connect to your company account to include this impact in ESG reports.</p>
           </Banner>
         )}
 
+        {/* Impact Overview Cards */}
         <Layout>
           <Layout.Section>
             <Card>
-              <BlockStack gap="500">
-                <Text as="h2" variant="headingLg">
-                  Your Impact Overview 🌳
-                </Text>
-                <InlineStack gap="1000" wrap={false}>
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Total Trees Planted
-                    </Text>
-                    <Text as="p" variant="heading2xl">
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <Text as="h2" variant="headingLg">Your Climate Impact 🌍</Text>
+                  <ButtonGroup>
+                    <Button
+                      icon={settings.isPaused ? PlayIcon : PauseIcon}
+                      onClick={handleTogglePause}
+                      tone={settings.isPaused ? "success" : undefined}
+                    >
+                      {settings.isPaused ? "Resume" : "Pause"}
+                    </Button>
+                    <Button url="/app/additional" icon={SettingsIcon}>
+                      Customize Widgets
+                    </Button>
+                  </ButtonGroup>
+                </InlineStack>
+                
+                <Divider />
+
+                {/* Stats Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+                  <div style={{ 
+                    background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", 
+                    borderRadius: "12px", 
+                    padding: "24px",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: "40px", marginBottom: "8px" }}>🌳</div>
+                    <Text as="p" variant="heading2xl" fontWeight="bold">
                       {impact.totalTreesPlanted.toLocaleString()}
                     </Text>
-                  </BlockStack>
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      CO₂ Offset (Est.)
+                    <Text as="p" variant="bodyMd" tone="subdued">Trees Planted</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      ${(impact.totalTreesPlanted * settings.costPerTree).toFixed(2)} funded
                     </Text>
-                    <Text as="p" variant="heading2xl">
-                      {impact.totalCo2OffsetKg.toLocaleString()} kg
+                  </div>
+
+                  <div style={{ 
+                    background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)", 
+                    borderRadius: "12px", 
+                    padding: "24px",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: "40px", marginBottom: "8px" }}>💨</div>
+                    <Text as="p" variant="heading2xl" fontWeight="bold">
+                      {impact.totalCo2OffsetKg.toLocaleString()}
                     </Text>
-                  </BlockStack>
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Orders Contributing
+                    <Text as="p" variant="bodyMd" tone="subdued">kg CO₂ Offset</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      ≈ {(impact.totalCo2OffsetKg / 1000).toFixed(1)} tonnes
                     </Text>
-                    <Text as="p" variant="heading2xl">
+                  </div>
+
+                  <div style={{ 
+                    background: "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)", 
+                    borderRadius: "12px", 
+                    padding: "24px",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: "40px", marginBottom: "8px" }}>🛒</div>
+                    <Text as="p" variant="heading2xl" fontWeight="bold">
                       {impact.totalOrders.toLocaleString()}
                     </Text>
-                  </BlockStack>
-                </InlineStack>
+                    <Text as="p" variant="bodyMd" tone="subdued">Orders Contributing</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      ${estimatedCost.toFixed(2)} total impact
+                    </Text>
+                  </div>
+                </div>
+
+                {/* Monthly Spending Progress */}
+                {settings.monthlyLimit && (
+                  <Card>
+                    <BlockStack gap="200">
+                      <InlineStack align="space-between">
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">Monthly Spending</Text>
+                        <Text as="p" variant="bodyMd">
+                          ${settings.monthlySpent.toFixed(2)} / ${settings.monthlyLimit.toFixed(2)}
+                        </Text>
+                      </InlineStack>
+                      <ProgressBar progress={monthlyProgress} tone={monthlyProgress >= 90 ? "critical" : "primary"} />
+                      {monthlyProgress >= 90 && (
+                        <Text as="p" variant="bodySm" tone="critical">
+                          Approaching monthly limit. Impact will pause when limit is reached.
+                        </Text>
+                      )}
+                    </BlockStack>
+                  </Card>
+                )}
+
                 {impact.isLinked && (
                   <Banner tone="success">
-                    <p>
-                      This store is linked to your Afforestation company account. 
-                      Impact is included in your company dashboard.
-                    </p>
+                    <p>✓ Linked to your Afforestation company account. Impact included in ESG dashboard.</p>
                   </Banner>
                 )}
               </BlockStack>
             </Card>
           </Layout.Section>
+        </Layout>
 
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="400">
-              <Card>
-                <fetcher.Form method="POST">
-                  <input type="hidden" name="action" value="updateSettings" />
-                  <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">
-                      Planting Settings
-                    </Text>
-                    <Select
-                      label="Trigger Type"
-                      name="triggerType"
-                      options={[
-                        { label: "Fixed (per order)", value: "fixed" },
-                        { label: "Threshold (per spend)", value: "threshold" },
-                      ]}
-                      value={currentTriggerType}
-                      onChange={() => { }} // Form will handle this
-                    />
+        {/* Settings Section */}
+        <Layout>
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Impact Type</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Choose what type of climate action to fund with each order.
+                </Text>
+                <Divider />
+                
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                  {[
+                    { id: "trees", icon: "🌳", label: "Trees", price: `$${settings.costPerTree}/tree` },
+                    { id: "carbon", icon: "💨", label: "Carbon Removal", price: `$${settings.costPerKgCo2}/kg` },
+                    { id: "both", icon: "🌍", label: "Both", price: "Combined impact" },
+                  ].map((option) => (
+                    <div
+                      key={option.id}
+                      onClick={() => updateSetting("impactType", option.id)}
+                      style={{
+                        cursor: "pointer",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: settings.impactType === option.id 
+                          ? "2px solid #2d5a27" 
+                          : "2px solid #e5e5e5",
+                        background: settings.impactType === option.id 
+                          ? "#f0fdf4" 
+                          : "#fff",
+                        textAlign: "center",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div style={{ fontSize: "32px", marginBottom: "8px" }}>{option.icon}</div>
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">{option.label}</Text>
+                      <Text as="p" variant="bodySm" tone="subdued">{option.price}</Text>
+                    </div>
+                  ))}
+                </div>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">When to Fund Impact</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Choose how impact is calculated for each order.
+                </Text>
+                <Divider />
+
+                <Select
+                  label="Trigger Type"
+                  options={[
+                    { label: "🌳 Per Order (fixed trees)", value: "fixed" },
+                    { label: "💰 By Percentage of Order Value", value: "percentage" },
+                    { label: "📊 By Spend Threshold", value: "threshold" },
+                  ]}
+                  value={settings.triggerType}
+                  onChange={(v) => updateSetting("triggerType", v)}
+                />
+
+                <TextField
+                  label={getTriggerLabel()}
+                  type="number"
+                  value={settings.triggerValue.toString()}
+                  onChange={(v) => updateSetting("triggerValue", parseFloat(v) || 1)}
+                  helpText={getTriggerHelpText()}
+                  autoComplete="off"
+                  min={settings.triggerType === "percentage" ? 0.1 : 1}
+                  step={settings.triggerType === "percentage" ? 0.1 : 1}
+                />
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+
+        {/* Spending Controls */}
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Spending Controls</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Set safety limits and stay in control of your environmental spending.
+                </Text>
+                <Divider />
+
+                <InlineStack gap="400" wrap={false}>
+                  <Box width="50%">
                     <TextField
-                      label={currentTriggerType === "fixed" ? "Trees per Order" : "Spend Threshold ($)"}
-                      name="triggerValue"
+                      label="Monthly Spending Limit ($)"
                       type="number"
-                      value={currentTriggerValue}
+                      value={settings.monthlyLimit?.toString() || ""}
+                      onChange={(v) => updateSetting("monthlyLimit", v ? parseFloat(v) : null)}
+                      placeholder="No limit"
+                      helpText="Leave empty for unlimited spending"
                       autoComplete="off"
-                      onChange={() => { }}
-                      helpText={
-                        currentTriggerType === "fixed"
-                          ? "Number of trees to plant per order"
-                          : "Plant 1 tree for every $ spent"
-                      }
                     />
-                    <Button submit variant="primary" loading={isSaving}>
-                      Save Settings
-                    </Button>
-                  </BlockStack>
-                </fetcher.Form>
-              </Card>
+                  </Box>
+                  <Box width="50%">
+                    <BlockStack gap="300">
+                      <Checkbox
+                        label="Notify me when approaching limit"
+                        checked={settings.notifyOnLimit}
+                        onChange={(v) => updateSetting("notifyOnLimit", v)}
+                      />
+                      <Checkbox
+                        label="Auto-resume at start of each month"
+                        checked={settings.autoResumeMonthly}
+                        onChange={(v) => updateSetting("autoResumeMonthly", v)}
+                      />
+                    </BlockStack>
+                  </Box>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
 
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    Display Widget
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    Show your impact to customers using the Afforestation 
-                    theme extension in your storefront.
-                  </Text>
-                  <Button url="/app/additional">
-                    Configure Widget
-                  </Button>
-                </BlockStack>
-              </Card>
-            </BlockStack>
+        {/* Save Button */}
+        <Layout>
+          <Layout.Section>
+            <InlineStack align="end" gap="300">
+              <Button url="/app/additional">
+                Customize Store Widgets
+              </Button>
+              <Button variant="primary" onClick={handleSave} loading={isSaving}>
+                Save All Settings
+              </Button>
+            </InlineStack>
           </Layout.Section>
         </Layout>
       </BlockStack>
     </Page>
-  );
+  )
 }

@@ -42,11 +42,23 @@ model ShopifySession {
 model ShopifySettings {
   id           String   @id @default(cuid())
   shop         String   @unique
-  triggerType  String   @default("fixed") // "fixed" per order or "threshold" per spend
-  triggerValue Float    @default(1) // number of trees per order or threshold amount
+  triggerType  String   @default("fixed") // "fixed" per order, "percentage" of order, "threshold" per spend
+  triggerValue Float    @default(1) // number of trees, percentage, or threshold amount
   isEnabled    Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Impact Type and Cost Settings
+  impactType          String   @default("trees") @map("impact_type") // trees, carbon, both
+  costPerTree         Float    @default(0.50) @map("cost_per_tree")
+  costPerKgCo2        Float    @default(0.20) @map("cost_per_kg_co2")
+  
+  // Spending Limits and Controls
+  monthlyLimit        Float?   @map("monthly_limit") // null = unlimited
+  monthlySpent        Float    @default(0) @map("monthly_spent")
+  isPaused            Boolean  @default(false) @map("is_paused")
+  notifyOnLimit       Boolean  @default(true) @map("notify_on_limit")
+  autoResumeMonthly   Boolean  @default(true) @map("auto_resume_monthly")
 
   // Widget Customization Settings
   widgetTheme         String  @default("light") @map("widget_theme") // light, dark, custom

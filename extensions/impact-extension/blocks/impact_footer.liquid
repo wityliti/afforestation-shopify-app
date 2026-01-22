@@ -1,0 +1,163 @@
+{% comment %}
+  Afforestation Footer Badge
+  Shows total impact and links to virtual forest
+{% endcomment %}
+
+<div class="afforestation-footer-badge" id="afforestation-footer-{{ block.id }}">
+  <div class="footer-badge-content">
+    <div class="footer-badge-icon">
+      <span id="footer-icon-{{ block.id }}">🌳</span>
+    </div>
+    <div class="footer-badge-stats">
+      <div class="footer-stat">
+        <span class="footer-stat-value" id="footer-trees-{{ block.id }}">0</span>
+        <span class="footer-stat-label">trees</span>
+      </div>
+    </div>
+    <div class="footer-badge-brand">
+      <span class="footer-brand">Afforestation</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const blockId = '{{ block.id }}';
+    const badge = document.getElementById('afforestation-footer-' + blockId);
+    const iconEl = document.getElementById('footer-icon-' + blockId);
+    const treesEl = document.getElementById('footer-trees-' + blockId);
+    
+    async function loadData() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        const s = data.settings || {};
+        
+        // Apply styling
+        badge.style.setProperty('--footer-primary', s.primaryColor || '#2d5a27');
+        badge.style.setProperty('--footer-bg', s.backgroundColor || '#f0fdf4');
+        
+        // Update icon
+        iconEl.textContent = s.treeEmoji || '🌳';
+        
+        // Animate count
+        animateCount(treesEl, data.treesPlanted || 0);
+        
+      } catch (error) {
+        console.warn('Afforestation: Could not load data', error);
+      }
+    }
+    
+    function animateCount(element, target) {
+      const duration = 1500;
+      const start = 0;
+      const startTime = performance.now();
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(start + (target - start) * easeOut);
+        element.textContent = current.toLocaleString();
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        }
+      }
+      
+      requestAnimationFrame(update);
+    }
+    
+    // Load when visible
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadData();
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    
+    observer.observe(badge);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Impact Footer Badge",
+  "target": "section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "A compact badge showing your total trees planted. Perfect for the footer."
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+  .afforestation-footer-badge {
+    --footer-primary: #2d5a27;
+    --footer-bg: #f0fdf4;
+    
+    display: inline-flex;
+    background: var(--footer-bg);
+    border: 1px solid rgba(45, 90, 39, 0.2);
+    border-radius: 8px;
+    padding: 8px 16px;
+    transition: all 0.3s ease;
+  }
+  
+  .afforestation-footer-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(45, 90, 39, 0.15);
+  }
+  
+  .afforestation-footer-badge .footer-badge-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .afforestation-footer-badge .footer-badge-icon {
+    font-size: 24px;
+    animation: gentle-bounce 2s ease-in-out infinite;
+  }
+  
+  @keyframes gentle-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  
+  .afforestation-footer-badge .footer-badge-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .afforestation-footer-badge .footer-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  
+  .afforestation-footer-badge .footer-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--footer-primary);
+  }
+  
+  .afforestation-footer-badge .footer-stat-label {
+    font-size: 12px;
+    color: var(--footer-primary);
+    opacity: 0.8;
+  }
+  
+  .afforestation-footer-badge .footer-brand {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--footer-primary);
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+  }
+</style>

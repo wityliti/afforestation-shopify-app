@@ -1,0 +1,135 @@
+{% comment %}
+  Afforestation Impact Banner
+  A header/announcement bar style widget showing climate commitment
+{% endcomment %}
+
+<div class="afforestation-banner" id="afforestation-banner-{{ block.id }}">
+  <div class="banner-content">
+    <span class="banner-icon" id="banner-icon-{{ block.id }}">🌳</span>
+    <span class="banner-text" id="banner-text-{{ block.id }}">
+      <strong id="banner-percent-{{ block.id }}">1%</strong> of every order funds climate action
+    </span>
+    <span class="banner-badge">
+      <span class="banner-brand">Afforestation</span>
+    </span>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const blockId = '{{ block.id }}';
+    const banner = document.getElementById('afforestation-banner-' + blockId);
+    const iconEl = document.getElementById('banner-icon-' + blockId);
+    const textEl = document.getElementById('banner-text-' + blockId);
+    const percentEl = document.getElementById('banner-percent-' + blockId);
+    
+    async function loadSettings() {
+      try {
+        const response = await fetch('/apps/afforestation/impact');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        const s = data.settings || {};
+        
+        // Apply styling
+        banner.style.setProperty('--banner-bg', s.primaryColor || '#2d5a27');
+        banner.style.setProperty('--banner-text', '#ffffff');
+        
+        // Update icon based on impact type
+        if (s.impactType === 'carbon') {
+          iconEl.textContent = '💨';
+        } else if (s.impactType === 'both') {
+          iconEl.textContent = '🌍';
+        } else {
+          iconEl.textContent = s.treeEmoji || '🌳';
+        }
+        
+        // Update text based on trigger type
+        if (s.triggerType === 'percentage') {
+          percentEl.textContent = s.triggerValue + '%';
+        } else if (s.triggerType === 'fixed') {
+          textEl.innerHTML = '<strong>' + s.triggerValue + ' tree' + (s.triggerValue > 1 ? 's' : '') + '</strong> planted with every order';
+        } else {
+          textEl.innerHTML = '<strong>1 tree</strong> for every $' + s.triggerValue + ' spent';
+        }
+        
+      } catch (error) {
+        console.warn('Afforestation: Could not load settings', error);
+      }
+    }
+    
+    loadSettings();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Impact Announcement Bar",
+  "target": "section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Display a banner showing your climate commitment. Styling is configured in the Afforestation app."
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+  .afforestation-banner {
+    --banner-bg: #2d5a27;
+    --banner-text: #ffffff;
+    
+    background: var(--banner-bg);
+    color: var(--banner-text);
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 14px;
+  }
+  
+  .afforestation-banner .banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .afforestation-banner .banner-icon {
+    font-size: 18px;
+  }
+  
+  .afforestation-banner .banner-text {
+    color: var(--banner-text);
+  }
+  
+  .afforestation-banner .banner-text strong {
+    font-weight: 700;
+  }
+  
+  .afforestation-banner .banner-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+  }
+  
+  .afforestation-banner .banner-brand {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  
+  @media (max-width: 480px) {
+    .afforestation-banner {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    
+    .afforestation-banner .banner-badge {
+      display: none;
+    }
+  }
+</style>
