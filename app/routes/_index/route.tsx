@@ -18,40 +18,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 // Animated counter hook
-function useCountUp(end: number, duration: number = 2000, startOnView: boolean = true) {
+function useCountUp(end: number, duration: number = 2000, delay: number = 0) {
   const [count, setCount] = useState(0);
-  const [hasStarted, setHasStarted] = useState(!startOnView);
+  const [hasStarted, setHasStarted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!startOnView) return;
-    
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasStarted) {
           setHasStarted(true);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.3 }
     );
 
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [hasStarted, startOnView]);
+  }, [hasStarted]);
 
   useEffect(() => {
     if (!hasStarted) return;
 
-    let startTime: number;
-    const animate = (currentTime: number) => {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(easeOut * end));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [hasStarted, end, duration]);
+    const timeoutId = setTimeout(() => {
+      let startTime: number;
+      const animate = (currentTime: number) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        setCount(Math.floor(easeOut * end));
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [hasStarted, end, duration, delay]);
 
   return { count, ref };
 }
@@ -84,9 +86,9 @@ export default function App() {
   const [shopValue, setShopValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
-  const trees = useCountUp(1247832, 2500);
-  const stores = useCountUp(523, 2000);
-  const co2 = useCountUp(24968, 2200);
+  const trees = useCountUp(1247832, 2500, 0);
+  const stores = useCountUp(523, 2000, 200);
+  const co2 = useCountUp(24968, 2200, 400);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -252,8 +254,8 @@ export default function App() {
               Live Impact
             </div>
           </div>
-          <div className={styles.statsGrid} ref={trees.ref}>
-            <div className={styles.statCard}>
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard} ref={trees.ref}>
               <div className={styles.statNumber}>
                 {trees.count.toLocaleString()}
                 <span className={styles.statPlus}>+</span>
@@ -263,7 +265,7 @@ export default function App() {
                 <div className={styles.statBarFill} style={{ width: '85%' }} />
               </div>
             </div>
-            <div className={styles.statCard}>
+            <div className={styles.statCard} ref={stores.ref}>
               <div className={styles.statNumber}>
                 {stores.count.toLocaleString()}
                 <span className={styles.statPlus}>+</span>
@@ -273,7 +275,7 @@ export default function App() {
                 <div className={styles.statBarFill} style={{ width: '65%' }} />
               </div>
             </div>
-            <div className={styles.statCard}>
+            <div className={styles.statCard} ref={co2.ref}>
               <div className={styles.statNumber}>
                 {co2.count.toLocaleString()}
                 <span className={styles.statUnit}>tons</span>
