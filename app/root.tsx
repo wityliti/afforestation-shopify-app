@@ -6,6 +6,9 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
+// Flaticon UIcons - Regular Rounded style (most common)
+import "@flaticon/flaticon-uicons/css/all/all.css";
+
 export default function App() {
   return (
     <html>

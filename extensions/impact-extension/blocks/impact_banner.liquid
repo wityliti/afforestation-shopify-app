@@ -4,6 +4,9 @@
   All visual settings are configurable in theme editor
 {% endcomment %}
 
+<!-- Flaticon UIcons CSS -->
+<link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
 <div class="afforestation-banner" id="afforestation-banner-{{ block.id }}" style="
   --banner-bg: {{ block.settings.background_color }};
   --banner-text: {{ block.settings.text_color }};
@@ -12,7 +15,7 @@
   --banner-weight: {% case block.settings.style %}{% when 'bold' %}600{% else %}400{% endcase %};
 ">
   <div class="banner-content">
-    <span class="banner-icon">{{ block.settings.icon }}</span>
+    <span class="banner-icon"><i class="fi fi-rr-{{ block.settings.icon }}"></i></span>
     <span class="banner-text">{{ block.settings.message }}</span>
     {% if block.settings.show_branding %}
     <span class="banner-badge">
@@ -35,14 +38,24 @@
       "type": "text",
       "id": "message",
       "label": "Banner message",
-      "default": "🌱 1% of every order funds climate action",
+      "default": "1% of every order funds climate action",
       "info": "Write in any language!"
     },
     {
-      "type": "text",
+      "type": "select",
       "id": "icon",
-      "label": "Icon/Emoji",
-      "default": "🌳"
+      "label": "Icon",
+      "options": [
+        { "value": "tree", "label": "Tree" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "flower", "label": "Flower" },
+        { "value": "seedling", "label": "Seedling" },
+        { "value": "cactus", "label": "Cactus" },
+        { "value": "tulip", "label": "Tulip" },
+        { "value": "earth-americas", "label": "Planet" },
+        { "value": "cloud", "label": "Cloud" }
+      ],
+      "default": "tree"
     },
     {
       "type": "header",
@@ -93,12 +106,17 @@
     --banner-size: 14px;
     --banner-weight: 400;
     
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--banner-bg);
     color: var(--banner-text);
     padding: var(--banner-padding);
     text-align: center;
     font-size: var(--banner-size);
     font-weight: var(--banner-weight);
+    box-sizing: border-box;
   }
   
   .afforestation-banner .banner-content {

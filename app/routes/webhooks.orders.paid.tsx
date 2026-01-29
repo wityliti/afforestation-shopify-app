@@ -19,17 +19,34 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response();
   }
 
+  // Check if impact is paused
+  if (settings.isPaused) {
+    console.log(`Impact paused for ${shop}, skipping order ${payload.order_number}`);
+    return new Response();
+  }
+
   let treesToPlant = 0;
   if (settings.triggerType === "fixed") {
     treesToPlant = settings.triggerValue;
   } else if (settings.triggerType === "threshold") {
     const totalAmount = parseFloat(payload.total_price || "0");
     treesToPlant = Math.floor(totalAmount / settings.triggerValue);
+  } else if (settings.triggerType === "percentage") {
+    const totalAmount = parseFloat(payload.total_price || "0");
+    const donationAmount = totalAmount * (settings.triggerValue / 100);
+    treesToPlant = Math.floor(donationAmount / (settings.costPerTree || 0.5));
   }
 
   if (treesToPlant > 0) {
     const trees = Math.round(treesToPlant);
     const co2Offset = trees * CO2_PER_TREE_KG;
+    const treeCost = trees * (settings.costPerTree || 0.5);
+
+    // Check spending limit
+    if (settings.monthlyLimit && settings.monthlySpent + treeCost > settings.monthlyLimit) {
+      console.log(`Monthly limit reached for ${shop}, skipping order ${payload.order_number}`);
+      return new Response();
+    }
 
     // Get or create the shop record
     let shopRecord = await prisma.shopifyShop.findUnique({
@@ -59,19 +76,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ${payload.id?.toString() || payload.order_number?.toString()},
         'order',
         ${JSON.stringify({
-          shop: shop,
-          order_id: payload.id,
-          order_number: payload.order_number,
-          total_price: payload.total_price,
-          currency: payload.currency,
-          customer_email: payload.email,
-          trigger_type: settings.triggerType,
-          trigger_value: settings.triggerValue,
-        })}::jsonb
+      shop: shop,
+      order_id: payload.id,
+      order_number: payload.order_number,
+      total_price: payload.total_price,
+      currency: payload.currency,
+      customer_email: payload.email,
+      trigger_type: settings.triggerType,
+      trigger_value: settings.triggerValue,
+      tree_cost: treeCost,
+    })}::jsonb
       )
     `;
 
-    console.log(`Successfully recorded impact: ${trees} trees for ${shop} (order ${payload.order_number})`);
+    // Update monthly spending
+    await prisma.shopifySettings.update({
+      where: { shop },
+      data: {
+        monthlySpent: { increment: treeCost },
+      },
+    });
+
+    console.log(`Successfully recorded impact: ${trees} trees ($${treeCost.toFixed(2)}) for ${shop} (order ${payload.order_number})`);
     // TODO: Call Tree-Nation / Ecologi API to actually plant trees
   }
 

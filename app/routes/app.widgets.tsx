@@ -103,19 +103,19 @@ export default function WidgetsShowcase() {
 
   // Preview components for each widget
   const ProductWidgetPreview = () => (
-    <div style={{ 
-      background: "#fff", 
-      borderRadius: "12px", 
+    <div style={{
+      background: "#fff",
+      borderRadius: "12px",
       padding: "16px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
       maxWidth: "280px",
     }}>
       <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
-        <div style={{ 
-          width: "60px", height: "60px", 
+        <div style={{
+          width: "60px", height: "60px",
           background: "#f3f4f6", borderRadius: "8px",
           display: "flex", alignItems: "center", justifyContent: "center",
-        }}>📦</div>
+        }}><i className="fi fi-rr-box-open" style={{ fontSize: "24px", color: "#6b7280" }}></i></div>
         <div>
           <div style={{ fontSize: "11px", color: "#9ca3af" }}>Product Name</div>
           <div style={{ fontSize: "16px", fontWeight: "600" }}>$49.99</div>
@@ -130,7 +130,7 @@ export default function WidgetsShowcase() {
         alignItems: "center",
         gap: "10px",
       }}>
-        <span style={{ fontSize: "22px" }}>🌳</span>
+        <span style={{ fontSize: "22px", color: "#2d5a27" }}><i className="fi fi-rr-tree"></i></span>
         <span style={{ color: "#14532d", fontSize: "13px" }}>
           This purchase plants <strong>1 tree</strong>!
         </span>
@@ -156,11 +156,11 @@ export default function WidgetsShowcase() {
         gap: "10px",
         fontSize: "13px",
       }}>
-        <span>🌳</span>
+        <span><i className="fi fi-rr-tree" style={{ color: "#fff" }}></i></span>
         <span><strong>1 tree</strong> planted with every order</span>
-        <span style={{ 
-          background: "rgba(255,255,255,0.2)", 
-          padding: "3px 10px", 
+        <span style={{
+          background: "rgba(255,255,255,0.2)",
+          padding: "3px 10px",
           borderRadius: "20px",
           fontSize: "11px",
         }}>Afforestation</span>
@@ -172,9 +172,9 @@ export default function WidgetsShowcase() {
   )
 
   const ForestWidgetPreview = () => (
-    <div style={{ 
-      background: "linear-gradient(180deg, #f0fdf4 0%, #fff 100%)", 
-      borderRadius: "12px", 
+    <div style={{
+      background: "linear-gradient(180deg, #f0fdf4 0%, #fff 100%)",
+      borderRadius: "12px",
       padding: "20px",
       textAlign: "center",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
@@ -186,31 +186,31 @@ export default function WidgetsShowcase() {
       <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginBottom: "16px" }}>
         <div>
           <div style={{ fontSize: "22px", fontWeight: "700", color: "#16a34a" }}>{stats.trees || 127}</div>
-          <div style={{ fontSize: "11px", color: "#6b7280" }}>Trees</div>
+          <div style={{ fontSize: "11px", color: "#6b7280" }}><i className="fi fi-rr-tree" style={{ marginRight: "4px" }}></i>Trees</div>
         </div>
         <div>
           <div style={{ fontSize: "22px", fontWeight: "700", color: "#0ea5e9" }}>{stats.co2 || 3048}</div>
-          <div style={{ fontSize: "11px", color: "#6b7280" }}>kg CO₂</div>
+          <div style={{ fontSize: "11px", color: "#6b7280" }}><i className="fi fi-rr-cloud" style={{ marginRight: "4px" }}></i>kg CO₂</div>
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
-        {["🌳", "🌲", "🌴", "🌳", "🌲", "🌿"].map((t, i) => (
-          <span key={i} style={{ fontSize: "20px" }}>{t}</span>
+        {[1, 2, 3, 4, 5, 6].map((_, i) => (
+          <i key={i} className={`fi fi-rr-${i % 2 === 0 ? 'tree' : 'leaf'}`} style={{ fontSize: "20px", color: i % 2 === 0 ? "#16a34a" : "#22c55e" }}></i>
         ))}
       </div>
     </div>
   )
 
   const FooterWidgetPreview = () => (
-    <div style={{ 
-      background: "#f9fafb", 
-      borderRadius: "12px", 
+    <div style={{
+      background: "#f9fafb",
+      borderRadius: "12px",
       padding: "16px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     }}>
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
         alignItems: "center",
         borderTop: "1px solid #e5e7eb",
         paddingTop: "12px",
@@ -225,7 +225,7 @@ export default function WidgetsShowcase() {
           alignItems: "center",
           gap: "8px",
         }}>
-          <span style={{ fontSize: "16px" }}>🌳</span>
+          <span style={{ fontSize: "16px", color: "#15803d" }}><i className="fi fi-rr-tree"></i></span>
           <span style={{ fontWeight: "600", color: "#15803d", fontSize: "14px" }}>{stats.trees || 127}</span>
           <span style={{ fontSize: "11px", color: "#6b7280" }}>trees</span>
         </div>
@@ -246,7 +246,7 @@ export default function WidgetsShowcase() {
   return (
     <Page>
       <TitleBar title="Impact Widgets" />
-      
+
       <BlockStack gap="600">
         {/* Compact Header */}
         <BlockStack gap="200">
@@ -272,7 +272,7 @@ export default function WidgetsShowcase() {
         {/* Widgets List - Horizontal Layout */}
         <BlockStack gap="400">
           <Text as="h2" variant="headingLg">Available Widgets</Text>
-          
+
           {widgets.map((widget, index) => (
             <Card key={widget.id}>
               <Layout>
@@ -282,7 +282,7 @@ export default function WidgetsShowcase() {
                     <BlockStack gap="400">
                       <Text as="h3" variant="headingMd">{widget.name}</Text>
                       <Text as="p" variant="bodyMd">{widget.description}</Text>
-                      
+
                       <BlockStack gap="200">
                         <Text as="p" variant="bodySm" fontWeight="semibold">Features:</Text>
                         <InlineStack gap="200" wrap>
@@ -310,15 +310,15 @@ export default function WidgetsShowcase() {
 
                 {/* Right: Preview */}
                 <Layout.Section variant="oneHalf">
-                  <Box 
-                    padding="400" 
-                    background="bg-surface-secondary" 
+                  <Box
+                    padding="400"
+                    background="bg-surface-secondary"
                     borderRadius="200"
                     minHeight="200px"
                   >
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
                       justifyContent: "center",
                       height: "100%",
                       minHeight: "200px",
@@ -347,7 +347,8 @@ export default function WidgetsShowcase() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
                     border: "2px solid #bbf7d0",
-                  }}>1</div>
+                    color: "#16a34a",
+                  }}><i className="fi fi-rr-palette"></i></div>
                   <Text as="p" variant="headingSm">Open Theme Editor</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
                     Go to Online Store → Themes → Customize
@@ -363,7 +364,8 @@ export default function WidgetsShowcase() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
                     border: "2px solid #bbf7d0",
-                  }}>2</div>
+                    color: "#16a34a",
+                  }}><i className="fi fi-rr-apps-add"></i></div>
                   <Text as="p" variant="headingSm">Add App Block</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
                     Click "Add section" and search for "Afforestation"
@@ -379,7 +381,8 @@ export default function WidgetsShowcase() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
                     border: "2px solid #bbf7d0",
-                  }}>3</div>
+                    color: "#16a34a",
+                  }}><i className="fi fi-rr-check"></i></div>
                   <Text as="p" variant="headingSm">Save & Done</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
                     Position the widget and click Save
@@ -451,7 +454,7 @@ export default function WidgetsShowcase() {
 
               <BlockStack gap="300">
                 <Text as="h3" variant="headingSm">Installation Steps</Text>
-                
+
                 {[
                   "Go to Online Store → Themes → Customize in your Shopify admin",
                   `Navigate to ${widget.placement} where you want the widget`,

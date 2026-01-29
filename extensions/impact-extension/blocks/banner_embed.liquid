@@ -3,13 +3,16 @@
   Always visible at top of store when enabled
 {% endcomment %}
 
+<!-- Flaticon UIcons CSS -->
+<link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
 {% if block.settings.enabled %}
 <div class="afforestation-banner-embed" id="afforestation-banner-embed" style="
   --banner-bg: {{ block.settings.background_color }};
   --banner-text: {{ block.settings.text_color }};
 ">
   <div class="banner-content">
-    <span class="banner-icon">{{ block.settings.icon }}</span>
+    <span class="banner-icon"><i class="fi fi-rr-{{ block.settings.icon }}"></i></span>
     <span class="banner-text">{{ block.settings.message }}</span>
     {% if block.settings.show_branding %}
     <span class="banner-badge">
@@ -24,13 +27,16 @@
     --banner-bg: #2d5a27;
     --banner-text: #ffffff;
     
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--banner-bg);
     color: var(--banner-text);
     padding: {% if block.settings.style == 'compact' %}6px 16px{% elsif block.settings.style == 'bold' %}14px 24px{% else %}10px 20px{% endif %};
     text-align: center;
     font-size: {% if block.settings.style == 'bold' %}16px{% else %}14px{% endif %};
     font-weight: {% if block.settings.style == 'bold' %}600{% else %}400{% endif %};
-    position: relative;
     z-index: 100;
   }
   
@@ -93,14 +99,22 @@
       "type": "text",
       "id": "message",
       "label": "Banner message",
-      "default": "🌳 1% of every order funds climate action",
+      "default": "1% of every order funds climate action",
       "info": "Write in any language!"
     },
     {
-      "type": "text",
+      "type": "select",
       "id": "icon",
-      "label": "Icon/Emoji",
-      "default": "🌳"
+      "label": "Icon",
+      "options": [
+        { "value": "tree", "label": "Tree" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "flower", "label": "Flower" },
+        { "value": "seedling", "label": "Seedling" },
+        { "value": "earth-americas", "label": "Planet" },
+        { "value": "cloud", "label": "Cloud" }
+      ],
+      "default": "tree"
     },
     {
       "type": "header",

@@ -4,6 +4,9 @@
   All visual settings are configurable in theme editor
 {% endcomment %}
 
+<!-- Flaticon UIcons CSS -->
+<link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
 {% assign count = block.settings.trees_count %}
 {% assign message = block.settings.message %}
 {% assign plural = "" %}
@@ -20,13 +23,13 @@
 ">
   <div class="impact-content">
     <span class="impact-icon {% if block.settings.animate %}animate-{{ block.settings.animation_type }}{% endif %}">
-      {{ block.settings.icon }}
+      <i class="fi fi-rr-{{ block.settings.icon }}"></i>
     </span>
     <span class="impact-text">{{ parsed_message }}</span>
   </div>
   {% if block.settings.show_total and block.settings.total_message != blank %}
   <div class="impact-total" id="widget-total-{{ block.id }}">
-    <span class="total-icon">🌍</span>
+    <span class="total-icon"><i class="fi fi-rr-earth-americas"></i></span>
     <span class="total-text">Loading total impact...</span>
   </div>
   {% endif %}
@@ -78,10 +81,18 @@
       "info": "Variables: {count} = trees, {s} = plural"
     },
     {
-      "type": "text",
+      "type": "select",
       "id": "icon",
-      "label": "Icon/Emoji",
-      "default": "🌳"
+      "label": "Icon",
+      "options": [
+        { "value": "tree", "label": "Tree" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "flower", "label": "Flower" },
+        { "value": "seedling", "label": "Seedling" },
+        { "value": "earth-americas", "label": "Planet" },
+        { "value": "cloud", "label": "Cloud" }
+      ],
+      "default": "tree"
     },
     {
       "type": "header",
@@ -189,6 +200,7 @@
     --widget-radius: 8px;
     --widget-font: inherit;
     
+    width: 100%;
     background: var(--widget-bg);
     border: 1px solid var(--widget-border);
     border-radius: var(--widget-radius);
@@ -234,6 +246,7 @@
   
   .afforestation-impact-widget .total-icon {
     font-size: 14px;
+    color: var(--widget-primary);
   }
   
   /* Animations */

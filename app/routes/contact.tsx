@@ -36,9 +36,9 @@ export default function Contact() {
           <div className={styles.logoSection} style={{ marginBottom: '2rem' }}>
             <div className={styles.logoWrapper}>
               <div className={styles.logoContainer} style={{ width: '80px', height: '80px' }}>
-                <img 
-                  src="/afforestation-logo.png" 
-                  alt="Afforestation" 
+                <img
+                  src="/afforestation-logo.png"
+                  alt="Afforestation"
                   className={styles.logoImage}
                   style={{ width: '50px', height: '50px' }}
                 />
@@ -61,23 +61,23 @@ export default function Contact() {
           color: 'rgba(255, 255, 255, 0.9)',
           lineHeight: '1.8',
         }}>
-          <h1 style={{ 
-            fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', 
-            fontWeight: 600, 
-            color: 'white', 
+          <h1 style={{
+            fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+            fontWeight: 600,
+            color: 'white',
             marginBottom: '1rem',
           }}>
             Contact Us
           </h1>
-          
+
           <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '2rem', fontSize: '1.1rem' }}>
             Have questions? We're here to help you make a positive impact on the planet.
           </p>
 
           {/* Contact Options */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1.5rem',
             marginBottom: '3rem'
           }}>
@@ -283,8 +283,8 @@ export default function Contact() {
                     <>
                       Send Message
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
                       </svg>
                     </>
                   )}
@@ -294,19 +294,19 @@ export default function Contact() {
           </div>
 
           {/* FAQ Link */}
-          <div style={{ 
-            marginTop: '2rem', 
-            padding: '1.5rem', 
-            background: 'rgba(255, 255, 255, 0.05)', 
+          <div style={{
+            marginTop: '2rem',
+            padding: '1.5rem',
+            background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
             textAlign: 'center'
           }}>
             <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '0.5rem' }}>
               Looking for quick answers?
             </p>
-            <a 
-              href="https://afforestation.org/faq" 
-              target="_blank" 
+            <a
+              href="https://afforestation.org/faq"
+              target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#4ade80', textDecoration: 'none', fontWeight: 500 }}
             >
@@ -316,9 +316,9 @@ export default function Contact() {
         </div>
 
         {/* Back link */}
-        <Link 
-          to="/" 
-          style={{ 
+        <Link
+          to="/"
+          style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',

@@ -4,6 +4,9 @@
   All visual settings are configurable in theme editor
 {% endcomment %}
 
+<!-- Flaticon UIcons CSS -->
+<link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
 <div class="afforestation-footer-badge {{ block.settings.layout }}" id="afforestation-footer-{{ block.id }}" style="
   --footer-primary: {{ block.settings.primary_color }};
   --footer-bg: {{ block.settings.background_color }};
@@ -11,7 +14,7 @@
 ">
   <div class="footer-badge-content">
     <div class="footer-badge-icon {% if block.settings.animate %}animate-bounce{% endif %}">
-      <span>{{ block.settings.icon }}</span>
+      <span><i class="fi fi-rr-{{ block.settings.icon }}"></i></span>
     </div>
     <div class="footer-badge-stats">
       <div class="footer-stat">
@@ -93,10 +96,18 @@
       "info": "Write in any language!"
     },
     {
-      "type": "text",
+      "type": "select",
       "id": "icon",
-      "label": "Icon/Emoji",
-      "default": "🌳"
+      "label": "Icon",
+      "options": [
+        { "value": "tree", "label": "Tree" },
+        { "value": "leaf", "label": "Leaf" },
+        { "value": "flower", "label": "Flower" },
+        { "value": "seedling", "label": "Seedling" },
+        { "value": "earth-americas", "label": "Planet" },
+        { "value": "cloud", "label": "Cloud" }
+      ],
+      "default": "tree"
     },
     {
       "type": "select",

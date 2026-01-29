@@ -29,7 +29,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       FROM impact_ledger
       WHERE source_type = 'shopify'
     `;
-    
+
     if (impactResult && impactResult[0]) {
       totalTrees = Number(impactResult[0].trees);
       totalCo2 = Math.round(Number(impactResult[0].co2) / 1000); // Convert kg to tons
@@ -45,7 +45,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Stats will remain 0 on error
   }
 
-  return json({ 
+  return json({
     showForm: Boolean(login),
     stats: {
       treesPlanted: totalTrees,
@@ -140,7 +140,7 @@ export default function App() {
       <div className={styles.bgLayer2} />
       <div className={styles.bgLayer3} />
       <FloatingParticles />
-      
+
       {/* Gradient overlays */}
       <div className={styles.gradientTop} />
       <div className={styles.gradientBottom} />
@@ -152,9 +152,9 @@ export default function App() {
           <div className={styles.logoWrapper}>
             <div className={styles.logoGlow} />
             <div className={styles.logoContainer}>
-              <img 
-                src="/afforestation-logo.png" 
-                alt="Afforestation" 
+              <img
+                src="/afforestation-logo.png"
+                alt="Afforestation"
                 className={styles.logoImage}
               />
             </div>
@@ -189,8 +189,8 @@ export default function App() {
               <div className={`${styles.inputContainer} ${isFocused ? styles.inputFocused : ''} ${shopValue ? styles.inputFilled : ''}`}>
                 <div className={styles.inputIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
                   </svg>
                 </div>
                 <input
@@ -207,15 +207,15 @@ export default function App() {
                 <button className={styles.submitButton} type="submit">
                   <span>Connect Store</span>
                   <svg className={styles.buttonArrow} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12 5 19 12 12 19"/>
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
                   </svg>
                 </button>
               </div>
             </Form>
             <p className={styles.formHint}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
               Free to install • No credit card required
             </p>
@@ -226,22 +226,22 @@ export default function App() {
         <div className={styles.trustBadges}>
           <div className={styles.badge}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="20 6 9 17 4 12"/>
+              <polyline points="20 6 9 17 4 12" />
             </svg>
             <span>Verified by Shopify</span>
           </div>
           <div className={styles.badgeDivider} />
           <div className={styles.badge}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <span>SSL Secured</span>
           </div>
           <div className={styles.badgeDivider} />
           <div className={styles.badge}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
             </svg>
             <span>2min Setup</span>
           </div>
@@ -253,8 +253,8 @@ export default function App() {
             <div className={styles.featureIconWrapper}>
               <div className={styles.featureIconBg} />
               <svg className={styles.featureIcon} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="M9 12l2 2 4-4"/>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M9 12l2 2 4-4" />
               </svg>
             </div>
             <h3>Verified Impact</h3>
@@ -265,11 +265,11 @@ export default function App() {
             <div className={styles.featureIconWrapper}>
               <div className={styles.featureIconBg} />
               <svg className={styles.featureIcon} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="2" y="3" width="20" height="14" rx="2"/>
-                <path d="M8 21h8"/>
-                <path d="M12 17v4"/>
-                <path d="M7 8h2"/>
-                <path d="M7 11h4"/>
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8" />
+                <path d="M12 17v4" />
+                <path d="M7 8h2" />
+                <path d="M7 11h4" />
               </svg>
             </div>
             <h3>Storefront Widget</h3>
@@ -280,9 +280,9 @@ export default function App() {
             <div className={styles.featureIconWrapper}>
               <div className={styles.featureIconBg} />
               <svg className={styles.featureIcon} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <path d="M3.27 6.96L12 12.01l8.73-5.05"/>
-                <path d="M12 22.08V12"/>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <path d="M3.27 6.96L12 12.01l8.73-5.05" />
+                <path d="M12 22.08V12" />
               </svg>
             </div>
             <h3>ESG Reports</h3>

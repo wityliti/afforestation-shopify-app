@@ -4,14 +4,17 @@
   All visual settings are configurable in theme editor
 {% endcomment %}
 
-{% assign forest_emojis = "🌳,🌲,🌴,🌿" | split: "," %}
+<!-- Flaticon UIcons CSS -->
+<link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+
+{% assign forest_emojis = "tree,leaf,tree,seedling" | split: "," %}
 {% case block.settings.forest_theme %}
   {% when 'pine' %}
-    {% assign forest_emojis = "🌲,🎄,🌲,🎋" | split: "," %}
+    {% assign forest_emojis = "tree,tree,leaf,tree" | split: "," %}
   {% when 'deciduous' %}
-    {% assign forest_emojis = "🌳,🍂,🍁,🌳" | split: "," %}
+    {% assign forest_emojis = "tree,leaf,tree,leaf" | split: "," %}
   {% when 'tropical' %}
-    {% assign forest_emojis = "🌴,🌺,🌸,🌴" | split: "," %}
+    {% assign forest_emojis = "tree,flower,leaf,tree" | split: "," %}
 {% endcase %}
 
 <div class="afforestation-impact-page" id="afforestation-forest-{{ block.id }}" style="
@@ -29,7 +32,7 @@
 
   <div class="impact-stats">
     <div class="stat-card">
-      <div class="stat-icon">🌳</div>
+      <div class="stat-icon"><i class="fi fi-rr-tree"></i></div>
       <div class="stat-value" id="forest-trees-count-{{ block.id }}">
         <span class="loading-skeleton"></span>
       </div>
@@ -37,7 +40,7 @@
     </div>
     {% if block.settings.show_co2 %}
     <div class="stat-card stat-co2">
-      <div class="stat-icon">💨</div>
+      <div class="stat-icon stat-icon-co2"><i class="fi fi-rr-cloud"></i></div>
       <div class="stat-value" id="forest-co2-count-{{ block.id }}">
         <span class="loading-skeleton"></span>
       </div>
@@ -46,7 +49,7 @@
     {% endif %}
     {% if block.settings.show_orders %}
     <div class="stat-card">
-      <div class="stat-icon">🛒</div>
+      <div class="stat-icon stat-icon-orders"><i class="fi fi-rr-shopping-cart"></i></div>
       <div class="stat-value" id="forest-orders-count-{{ block.id }}">
         <span class="loading-skeleton"></span>
       </div>
@@ -55,6 +58,7 @@
     {% endif %}
   </div>
 
+  {% if block.settings.show_forest %}
   <div class="virtual-forest">
     <h2>{{ block.settings.forest_title }}</h2>
     <div class="forest-grid" id="forest-grid-{{ block.id }}">
@@ -62,6 +66,7 @@
     </div>
     <p class="forest-note" id="forest-note-{{ block.id }}"></p>
   </div>
+  {% endif %}
   
   {% if block.settings.show_cta %}
   <div class="impact-cta">
@@ -122,12 +127,11 @@
         forestGrid.innerHTML = '';
         
         if (treesToShow === 0) {
-          forestGrid.innerHTML = '<div class="empty-forest">🌱 Plant the first tree with your purchase!</div>';
+          forestGrid.innerHTML = '<div class="empty-forest"><i class="fi fi-rr-seedling"></i> Plant the first tree with your purchase!</div>';
         } else {
           for (let i = 0; i < treesToShow; i++) {
-            const tree = document.createElement('span');
-            tree.className = 'forest-tree';
-            tree.textContent = forestEmojis[i % forestEmojis.length];
+            const tree = document.createElement('i');
+            tree.className = 'fi fi-rr-' + forestEmojis[i % forestEmojis.length] + ' forest-tree';
             tree.style.animationDelay = (i * 30) + 'ms';
             forestGrid.appendChild(tree);
           }
@@ -141,7 +145,7 @@
         if (treesEl) treesEl.textContent = '0';
         if (co2El) co2El.textContent = '0';
         if (ordersEl) ordersEl.textContent = '0';
-        forestGrid.innerHTML = '<div class="empty-forest">🌱 Be the first to plant a tree!</div>';
+        forestGrid.innerHTML = '<div class="empty-forest"><i class="fi fi-rr-seedling"></i> Be the first to plant a tree!</div>';
       }
     }
     
@@ -217,20 +221,26 @@
       "content": "Forest Section"
     },
     {
+      "type": "checkbox",
+      "id": "show_forest",
+      "label": "Show Virtual Forest",
+      "default": true
+    },
+    {
       "type": "text",
       "id": "forest_title",
       "label": "Forest section title",
-      "default": "🌲 Our Virtual Forest 🌲"
+      "default": "Our Virtual Forest"
     },
     {
       "type": "select",
       "id": "forest_theme",
       "label": "Forest theme",
       "options": [
-        { "value": "mixed", "label": "🌳🌲🌴 Mixed Forest" },
-        { "value": "pine", "label": "🌲🎄 Pine Forest" },
-        { "value": "deciduous", "label": "🌳🍂🍁 Deciduous" },
-        { "value": "tropical", "label": "🌴🌺 Tropical" }
+        { "value": "mixed", "label": "Mixed Forest" },
+        { "value": "pine", "label": "Pine Forest" },
+        { "value": "deciduous", "label": "Deciduous" },
+        { "value": "tropical", "label": "Tropical" }
       ],
       "default": "mixed"
     },
@@ -248,7 +258,7 @@
       "type": "textarea",
       "id": "cta_text",
       "label": "CTA text",
-      "default": "Every tree makes a difference. Thank you for being part of our journey towards a greener planet! 💚"
+      "default": "Every tree makes a difference. Thank you for being part of our journey towards a greener planet!"
     },
     {
       "type": "text",
@@ -314,9 +324,13 @@
     --widget-bg: #f8fcf8;
     --border-color: #e0eee0;
     
-    max-width: 1000px;
-    margin: 60px auto;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 60px 0;
     padding: 0 20px;
+    box-sizing: border-box;
     text-align: center;
     color: var(--text-color);
   }
@@ -362,6 +376,15 @@
   .afforestation-impact-page .stat-icon {
     font-size: 48px;
     margin-bottom: 12px;
+    color: var(--primary-color);
+  }
+  
+  .afforestation-impact-page .stat-icon-co2 {
+    color: var(--secondary-color);
+  }
+  
+  .afforestation-impact-page .stat-icon-orders {
+    color: #8b5cf6;
   }
   
   .afforestation-impact-page .stat-value {
