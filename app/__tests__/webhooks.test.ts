@@ -103,6 +103,58 @@ describe("Webhook Handlers", () => {
             expect(treesToPlant).toBe(4); // $100 / $25 = 4 trees
         });
 
+        it("should calculate trees planted for per_product trigger", () => {
+            const settings = {
+                triggerType: "per_product",
+                triggerValue: 1,
+                isEnabled: true,
+                isPaused: false,
+            };
+
+            const lineItems = [
+                { quantity: 2 },
+                { quantity: 1 },
+                { quantity: 3 },
+            ];
+
+            const treesPerItem = Math.max(1, Math.floor(settings.triggerValue));
+            const treesToPlant = lineItems.reduce((sum: number, item: { quantity?: number }) => {
+                const qty = typeof item.quantity === "number" ? item.quantity : 1;
+                return sum + qty * treesPerItem;
+            }, 0);
+
+            expect(treesToPlant).toBe(6); // 2 + 1 + 3 = 6 trees
+        });
+
+        it("should calculate trees for per_product with multiple trees per unit", () => {
+            const settings = {
+                triggerType: "per_product",
+                triggerValue: 2,
+                isEnabled: true,
+                isPaused: false,
+            };
+
+            const lineItems = [{ quantity: 3 }];
+            const treesPerItem = Math.max(1, Math.floor(settings.triggerValue));
+            const treesToPlant = lineItems.reduce((sum: number, item: { quantity?: number }) => {
+                const qty = typeof item.quantity === "number" ? item.quantity : 1;
+                return sum + qty * treesPerItem;
+            }, 0);
+
+            expect(treesToPlant).toBe(6); // 3 units × 2 trees = 6 trees
+        });
+
+        it("should plant 0 trees for per_product when order has no line items", () => {
+            const lineItems: Array<{ quantity?: number }> = [];
+            const treesPerItem = 1;
+            const treesToPlant = lineItems.reduce((sum: number, item: { quantity?: number }) => {
+                const qty = typeof item.quantity === "number" ? item.quantity : 1;
+                return sum + qty * treesPerItem;
+            }, 0);
+
+            expect(treesToPlant).toBe(0);
+        });
+
         it("should not plant trees when paused", () => {
             const settings = {
                 triggerType: "fixed",

@@ -1,7 +1,7 @@
 import { json } from "@remix-run/node"
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { useEffect, useState, useCallback } from "react"
-import { useLoaderData, useFetcher } from "@remix-run/react"
+import { useLoaderData, useFetcher, useSearchParams } from "@remix-run/react"
 import {
   Page,
   Layout,
@@ -19,11 +19,28 @@ import {
   Box,
   Checkbox,
   ButtonGroup,
+  Modal,
 } from "@shopify/polaris"
-// Icons removed - using emoji instead for compatibility
+import { SettingsIcon } from "@shopify/polaris-icons"
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react"
-import { authenticate } from "../shopify.server"
+import { authenticate, unauthenticated } from "../shopify.server"
 import prisma from "../db.server"
+
+export interface TriggerRule {
+  type: "fixed" | "per_product" | "per_tag" | "threshold" | "percentage"
+  enabled: boolean
+  value: number
+  tag?: string
+  minOrderValue?: number
+}
+
+const DEFAULT_RULES: TriggerRule[] = [
+  { type: "fixed", enabled: true, value: 1 },
+  { type: "per_product", enabled: false, value: 1 },
+  { type: "per_tag", enabled: false, value: 1, tag: "" },
+  { type: "threshold", enabled: false, value: 50, minOrderValue: 50 },
+  { type: "percentage", enabled: false, value: 5 },
+]
 
 interface ImpactData {
   totalTreesPlanted: number
@@ -36,6 +53,8 @@ interface ImpactData {
 interface Settings {
   triggerType: string
   triggerValue: number
+  minOrderValue: number | null
+  triggerRules: TriggerRule[] | null
   isEnabled: boolean
   impactType: string
   costPerTree: number
@@ -51,9 +70,18 @@ interface Settings {
   loyaltyApiKey: string | null
 }
 
+interface ActivityItem {
+  date: string
+  treesPlanted: number
+  orderNumber: string | null
+  description: string
+}
+
 const DEFAULT_SETTINGS: Settings = {
   triggerType: "fixed",
   triggerValue: 1,
+  minOrderValue: null,
+  triggerRules: null,
   isEnabled: true,
   impactType: "trees",
   costPerTree: 0.50,
@@ -123,10 +151,89 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.warn("Could not query impact_ledger:", error)
   }
 
+  // Fetch recent activity for the activity feed (last 30 days)
+  let recentActivity: ActivityItem[] = []
+  try {
+    const url = new URL(request.url)
+    const period = url.searchParams.get("period") || "30"
+    const days = Math.min(90, Math.max(7, parseInt(period, 10) || 30))
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+
+    const activityResult = await prisma.$queryRaw<Array<{
+      created_at: Date
+      trees_planted: number
+      metadata: { order_number?: string } | null
+    }>>`
+      SELECT created_at, trees_planted, metadata
+      FROM impact_ledger
+      WHERE source_type = 'shopify' AND source_id = ${shopRecord.id.toString()}
+        AND created_at >= ${since}
+      ORDER BY created_at DESC
+      LIMIT 20
+    `
+
+    recentActivity = activityResult.map((row) => {
+      const meta = (row.metadata as { order_number?: string }) || {}
+      const orderNum = meta.order_number || null
+      const dateStr = new Date(row.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+      return {
+        date: dateStr,
+        treesPlanted: Number(row.trees_planted),
+        orderNumber: orderNum,
+        description: orderNum
+          ? `Order #${orderNum} planted ${row.trees_planted} tree${row.trees_planted !== 1 ? "s" : ""}`
+          : `Planted ${row.trees_planted} tree${row.trees_planted !== 1 ? "s" : ""}`,
+      }
+    })
+  } catch (err) {
+    console.warn("Could not fetch recent activity:", err)
+  }
+
+  let triggerRules = settings.triggerRules as TriggerRule[] | null
+  if (!Array.isArray(triggerRules) || triggerRules.length === 0) {
+    triggerRules = DEFAULT_RULES.map((r) => ({
+      ...r,
+      enabled: r.type === settings.triggerType,
+      value: r.type === settings.triggerType ? settings.triggerValue : r.value,
+      minOrderValue: r.type === "threshold" ? settings.minOrderValue ?? 50 : r.minOrderValue,
+    }))
+  }
+
+  let productCountByTag: Record<string, number> = {}
+  for (const r of triggerRules) {
+    if (r.type === "per_tag" && r.tag?.trim()) {
+      try {
+        const tagVal = r.tag.trim()
+        const query = tagVal.includes(" ") ? `tag:"${tagVal.replace(/"/g, '\\"')}"` : `tag:${tagVal}`
+        const { admin } = await unauthenticated.admin(shop)
+        const res = await admin.graphql(
+          `#graphql
+          query countProductsByTag($query: String!) {
+            productsCount(query: $query) {
+              count
+            }
+          }`,
+          { variables: { query } }
+        )
+        const json = await res.json()
+        const count = json?.data?.productsCount?.count ?? 0
+        productCountByTag[tagVal] = count
+      } catch {
+        productCountByTag[r.tag.trim()] = 0
+      }
+    }
+  }
+
   return json({
     settings: {
       triggerType: settings.triggerType,
       triggerValue: settings.triggerValue,
+      minOrderValue: settings.minOrderValue ?? null,
+      triggerRules,
       isEnabled: settings.isEnabled,
       impactType: settings.impactType ?? "trees",
       costPerTree: settings.costPerTree ?? 0.50,
@@ -142,6 +249,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       loyaltyApiKey: settings.loyaltyApiKey ?? null,
     },
     impact,
+    recentActivity,
+    productCountByTag,
     shopId: shopRecord.id,
     shopName: shop,
   })
@@ -154,8 +263,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const actionType = formData.get("action")
 
   if (actionType === "updateSettings") {
-    const triggerType = formData.get("triggerType") as string
-    const triggerValue = parseFloat(formData.get("triggerValue") as string) || 1
     const impactType = formData.get("impactType") as string
     const monthlyLimit = formData.get("monthlyLimit")
       ? parseFloat(formData.get("monthlyLimit") as string)
@@ -163,24 +270,51 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const notifyOnLimit = formData.get("notifyOnLimit") === "true"
     const autoResumeMonthly = formData.get("autoResumeMonthly") === "true"
 
+    const triggerRulesRaw = formData.get("triggerRules")
+    let triggerRules: TriggerRule[] | null = null
+    if (triggerRulesRaw && typeof triggerRulesRaw === "string") {
+      try {
+        triggerRules = JSON.parse(triggerRulesRaw) as TriggerRule[]
+      } catch {}
+    }
+
+    const updateData: Record<string, unknown> = {
+      impactType,
+      monthlyLimit,
+      notifyOnLimit,
+      autoResumeMonthly,
+    }
+    if (triggerRules && triggerRules.length > 0) {
+      updateData.triggerRules = triggerRules
+      const firstEnabled = triggerRules.find((r) => r.enabled)
+      if (firstEnabled) {
+        updateData.triggerType = firstEnabled.type
+        updateData.triggerValue = firstEnabled.value
+        updateData.minOrderValue = firstEnabled.minOrderValue ?? null
+      }
+    } else {
+      const triggerType = formData.get("triggerType") as string
+      const triggerValue = parseFloat(formData.get("triggerValue") as string) || 1
+      const minOrderValue = formData.get("minOrderValue")
+        ? parseFloat(formData.get("minOrderValue") as string)
+        : null
+      updateData.triggerType = triggerType
+      updateData.triggerValue = triggerValue
+      updateData.minOrderValue = minOrderValue
+    }
+
     const settings = await prisma.shopifySettings.upsert({
       where: { shop },
-      update: {
-        triggerType,
-        triggerValue,
-        impactType,
-        monthlyLimit,
-        notifyOnLimit,
-        autoResumeMonthly,
-      },
+      update: updateData as Parameters<typeof prisma.shopifySettings.update>[0]["data"],
       create: {
         shop,
-        triggerType,
-        triggerValue,
-        impactType,
-        monthlyLimit,
-        notifyOnLimit,
-        autoResumeMonthly,
+        triggerType: (updateData.triggerType as string) ?? "fixed",
+        triggerValue: (updateData.triggerValue as number) ?? 1,
+        impactType: (updateData.impactType as string) ?? "trees",
+        monthlyLimit: updateData.monthlyLimit as number | null,
+        notifyOnLimit: (updateData.notifyOnLimit as boolean) ?? true,
+        autoResumeMonthly: (updateData.autoResumeMonthly as boolean) ?? true,
+        triggerRules: updateData.triggerRules as object | null,
       },
     })
 
@@ -295,16 +429,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 }
 
 export default function Index() {
-  const { settings: initialSettings, impact, shopId, shopName } = useLoaderData<typeof loader>()
+  const { settings: initialSettings, impact, recentActivity = [], productCountByTag = {}, shopId, shopName } = useLoaderData<typeof loader>()
   const fetcher = useFetcher<typeof action>()
   const shopify = useAppBridge()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const period = searchParams.get("period") || "30"
 
   const [settings, setSettings] = useState<Settings>({
     ...DEFAULT_SETTINGS,
     ...initialSettings,
   })
 
+  const [triggerRules, setTriggerRules] = useState<TriggerRule[]>(
+    initialSettings.triggerRules ?? DEFAULT_RULES
+  )
+
+  const [settingsModalOpen, setSettingsModalOpen] = useState<string | null>(null)
+  const [editingRuleIndex, setEditingRuleIndex] = useState<number>(0)
+
   const isSaving = fetcher.state !== "idle"
+
+  const openSettingsModal = (index: number) => {
+    setEditingRuleIndex(index)
+    setSettingsModalOpen(triggerRules[index].type)
+  }
+
+  const closeSettingsModal = () => setSettingsModalOpen(null)
+
+  const updateRule = (index: number, updates: Partial<TriggerRule>) => {
+    setTriggerRules((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], ...updates }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -328,8 +486,7 @@ export default function Index() {
   const handleSave = useCallback(() => {
     const formData = new FormData()
     formData.append("action", "updateSettings")
-    formData.append("triggerType", settings.triggerType)
-    formData.append("triggerValue", settings.triggerValue.toString())
+    formData.append("triggerRules", JSON.stringify(triggerRules))
     formData.append("impactType", settings.impactType)
     if (settings.monthlyLimit !== null) {
       formData.append("monthlyLimit", settings.monthlyLimit.toString())
@@ -337,7 +494,7 @@ export default function Index() {
     formData.append("notifyOnLimit", settings.notifyOnLimit.toString())
     formData.append("autoResumeMonthly", settings.autoResumeMonthly.toString())
     fetcher.submit(formData, { method: "POST" })
-  }, [settings, fetcher])
+  }, [settings, triggerRules, fetcher])
 
   const handleTogglePause = useCallback(() => {
     const formData = new FormData()
@@ -345,22 +502,41 @@ export default function Index() {
     fetcher.submit(formData, { method: "POST" })
   }, [fetcher])
 
-  const getTriggerLabel = () => {
-    switch (settings.triggerType) {
-      case "fixed": return "Trees per Order"
-      case "percentage": return "% of Order Value"
-      case "threshold": return "$ Spend per Tree"
-      default: return "Value"
+  const getActiveRuleSummary = () => {
+    const enabled = triggerRules.filter((r) => r.enabled)
+    if (enabled.length === 0) return "No rules active"
+    if (enabled.length === 1) {
+      const r = enabled[0]
+      if (r.type === "fixed") return `${r.value} tree${r.value !== 1 ? "s" : ""} per order`
+      if (r.type === "per_product") return `${r.value} tree${r.value !== 1 ? "s" : ""} per product`
+      if (r.type === "per_tag") return `1 tree per '${r.tag || "tag"}' product`
+      if (r.type === "threshold") return `1 tree per $${r.value} spent`
+      if (r.type === "percentage") return `${r.value}% of order value`
     }
+    return `${enabled.length} rules active`
   }
 
-  const getTriggerHelpText = () => {
-    switch (settings.triggerType) {
-      case "fixed": return `Plant ${settings.triggerValue} tree${settings.triggerValue !== 1 ? 's' : ''} for every order`
-      case "percentage": return `Donate ${settings.triggerValue}% of each order value to plant trees`
-      case "threshold": return `Plant 1 tree for every $${settings.triggerValue} spent`
-      default: return ""
+  const getRuleTitle = (r: TriggerRule) => {
+    if (r.type === "fixed") return `Plant ${r.value} tree${r.value !== 1 ? "s" : ""} per order`
+    if (r.type === "per_product") return `Plant ${r.value} tree${r.value !== 1 ? "s" : ""} per product`
+    if (r.type === "per_tag") return `Plant ${r.value} tree${r.value !== 1 ? "s" : ""} for every '${r.tag || "tag"}' product`
+    if (r.type === "threshold") return `Plant 1 tree for every $${r.value} spent`
+    if (r.type === "percentage") return `${r.value}% of order value`
+    return "Custom rule"
+  }
+
+  const getRuleDesc = (r: TriggerRule, index: number) => {
+    if (r.type === "fixed") return "For every order"
+    if (r.type === "per_product") return "Trees per product unit in each order"
+    if (r.type === "per_tag") {
+      const count = r.tag ? productCountByTag[r.tag] : 0
+      return r.tag
+        ? `For selected product tags. Monitors ${count} products with tag '${r.tag}'`
+        : "For products with a specific tag"
     }
+    if (r.type === "threshold") return `For each $${r.value} in order subtotal${r.minOrderValue ? `. Minimum of $${r.minOrderValue} per order` : ""}`
+    if (r.type === "percentage") return "Donate a percentage of each order to plant trees"
+    return ""
   }
 
   const monthlyProgress = settings.monthlyLimit
@@ -374,6 +550,45 @@ export default function Index() {
     <Page>
       <TitleBar title="Afforestation Dashboard" />
       <BlockStack gap="500">
+        {/* Active Rule Banner - inspired by Plant Trees app */}
+        {!settings.isPaused && (
+          <div style={{
+            background: "linear-gradient(135deg, #2d5a27 0%, #3d7a37 100%)",
+            borderRadius: "12px",
+            padding: "16px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#fff",
+            boxShadow: "0 2px 8px rgba(45, 90, 39, 0.2)",
+          }}>
+            <InlineStack gap="300" blockAlign="center">
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                backgroundColor: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <img src="/logo.png" alt="Afforestation" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+              </div>
+              <div>
+                <Text as="p" variant="bodyMd" fontWeight="bold">
+                  Afforestation.org | {getActiveRuleSummary()} | Active
+                </Text>
+                <p style={{ margin: 0, fontSize: "13px", color: "rgba(255, 255, 255, 0.95)", lineHeight: 1.4 }}>
+                  Fund verified tree-planting with every order
+                </p>
+              </div>
+            </InlineStack>
+            <Badge tone="success">Active</Badge>
+          </div>
+        )}
+
         {/* Status Banner */}
         {settings.isPaused && (
           <Banner
@@ -521,83 +736,237 @@ export default function Index() {
           </Layout.Section>
         </Layout>
 
-        {/* Impact Settings - Combined Card */}
+        {/* Impact Settings - Rule Cards with Toggle + Settings (inspired by Plant Trees app) */}
         <Layout>
           <Layout.Section>
             <Card>
               <BlockStack gap="500">
-                <Text as="h2" variant="headingMd">Impact Settings</Text>
+                <Text as="h2" variant="headingMd">When to Fund Impact</Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Choose how impact is calculated for each order. Toggle rules on/off and use the gear icon to modify parameters.
+                </Text>
 
-                <InlineStack gap="600" wrap={false} align="start">
-                  {/* Impact Type Column */}
-                  <Box width="50%">
-                    <BlockStack gap="300">
-                      <Text as="h3" variant="headingSm">Impact Type</Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Choose what type of climate action to fund with each order.
-                      </Text>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                        {[
-                          { id: "trees", icon: <i className="fi fi-rr-tree" style={{ fontSize: "28px", color: "#2d5a27" }}></i>, label: "Trees", price: `$${settings.costPerTree}/tree` },
-                          { id: "carbon", icon: <i className="fi fi-rr-cloud" style={{ fontSize: "28px", color: "#3b82f6" }}></i>, label: "Carbon Removal", price: `$${settings.costPerKgCo2}/kg` },
-                          { id: "both", icon: <i className="fi fi-rr-earth-americas" style={{ fontSize: "28px", color: "#10b981" }}></i>, label: "Both", price: "Combined impact" },
-                        ].map((option) => (
-                          <div
-                            key={option.id}
-                            onClick={() => updateSetting("impactType", option.id)}
-                            style={{
-                              cursor: "pointer",
-                              padding: "16px",
-                              borderRadius: "12px",
-                              border: settings.impactType === option.id
-                                ? "2px solid #2d5a27"
-                                : "2px solid #e5e5e5",
-                              background: settings.impactType === option.id
-                                ? "#f0fdf4"
-                                : "#fff",
-                              textAlign: "center",
-                              transition: "all 0.2s",
-                            }}
-                          >
-                            <div style={{ marginBottom: "6px" }}>{option.icon}</div>
-                            <Text as="p" variant="bodySm" fontWeight="semibold">{option.label}</Text>
-                            <Text as="p" variant="bodySm" tone="subdued">{option.price}</Text>
-                          </div>
-                        ))}
+                {/* Rule Cards - multiple toggles, each can be on/off */}
+                <BlockStack gap="300">
+                  {triggerRules.map((rule, index) => (
+                    <div
+                      key={rule.type}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1px solid #e5e5e5",
+                        background: "#fafafa",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "16px",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">{getRuleTitle(rule)}</Text>
+                        <Text as="p" variant="bodySm" tone="subdued">{getRuleDesc(rule, index)}</Text>
                       </div>
-                    </BlockStack>
-                  </Box>
+                      <InlineStack gap="300" blockAlign="center">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => updateRule(index, { enabled: !rule.enabled })}
+                          onKeyDown={(e) => e.key === "Enter" && updateRule(index, { enabled: !rule.enabled })}
+                          style={{
+                            width: "44px",
+                            height: "24px",
+                            borderRadius: "12px",
+                            background: rule.enabled ? "#2d5a27" : "#d1d5db",
+                            cursor: "pointer",
+                            position: "relative",
+                            transition: "background 0.2s",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "50%",
+                              background: "#fff",
+                              position: "absolute",
+                              top: "2px",
+                              left: rule.enabled ? "22px" : "2px",
+                              transition: "left 0.2s",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }}
+                          />
+                        </div>
+                        <Button
+                          variant="plain"
+                          icon={SettingsIcon}
+                          accessibilityLabel={`Edit ${getRuleTitle(rule)} settings`}
+                          onClick={() => openSettingsModal(index)}
+                        />
+                      </InlineStack>
+                    </div>
+                  ))}
+                </BlockStack>
 
-                  {/* When to Fund Column */}
-                  <Box width="50%">
-                    <BlockStack gap="300">
-                      <Text as="h3" variant="headingSm">When to Fund Impact</Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Choose how impact is calculated for each order.
-                      </Text>
-                      <Select
-                        label="Trigger Type"
-                        options={[
-                          { label: "Per Order (fixed trees)", value: "fixed" },
-                          { label: "By Percentage of Order Value", value: "percentage" },
-                          { label: "By Spend Threshold", value: "threshold" },
-                        ]}
-                        value={settings.triggerType}
-                        onChange={(v) => updateSetting("triggerType", v)}
-                      />
-                      <TextField
-                        label={getTriggerLabel()}
-                        type="number"
-                        value={settings.triggerValue.toString()}
-                        onChange={(v) => updateSetting("triggerValue", parseFloat(v) || 1)}
-                        helpText={getTriggerHelpText()}
-                        autoComplete="off"
-                        min={settings.triggerType === "percentage" ? 0.1 : 1}
-                        step={settings.triggerType === "percentage" ? 0.1 : 1}
-                      />
-                    </BlockStack>
-                  </Box>
+                {/* Settings Modal */}
+                <Modal
+                  open={settingsModalOpen !== null}
+                  onClose={closeSettingsModal}
+                  title={settingsModalOpen ? `Edit ${getRuleTitle(triggerRules[editingRuleIndex])}` : ""}
+                  primaryAction={{
+                    content: "Save",
+                    onAction: () => {
+                      handleSave()
+                      closeSettingsModal()
+                    },
+                    loading: isSaving,
+                  }}
+                  secondaryActions={[{ content: "Cancel", onAction: closeSettingsModal }]}
+                >
+                  <Modal.Section>
+                    {settingsModalOpen && triggerRules[editingRuleIndex] && (
+                      <BlockStack gap="400">
+                        {triggerRules[editingRuleIndex].type !== "per_tag" && (
+                          <TextField
+                            label={
+                              triggerRules[editingRuleIndex].type === "fixed" ? "Trees per Order" :
+                              triggerRules[editingRuleIndex].type === "per_product" ? "Trees per Product" :
+                              triggerRules[editingRuleIndex].type === "threshold" ? "$ Spend per Tree" :
+                              "% of Order Value"
+                            }
+                            type="number"
+                            value={triggerRules[editingRuleIndex].value.toString()}
+                            onChange={(v) => updateRule(editingRuleIndex, { value: parseFloat(v) || 1 })}
+                            autoComplete="off"
+                            min={triggerRules[editingRuleIndex].type === "percentage" ? 0.1 : 1}
+                            step={triggerRules[editingRuleIndex].type === "percentage" ? 0.1 : 1}
+                          />
+                        )}
+                        {triggerRules[editingRuleIndex].type === "per_tag" && (
+                          <>
+                            <TextField
+                              label="Product tag"
+                              value={triggerRules[editingRuleIndex].tag || ""}
+                              onChange={(v) => updateRule(editingRuleIndex, { tag: v })}
+                              placeholder="e.g. Eco"
+                              helpText="Products with this tag will trigger tree planting"
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label="Trees per matching product"
+                              type="number"
+                              value={triggerRules[editingRuleIndex].value.toString()}
+                              onChange={(v) => updateRule(editingRuleIndex, { value: parseFloat(v) || 1 })}
+                              autoComplete="off"
+                              min={1}
+                            />
+                          </>
+                        )}
+                        {triggerRules[editingRuleIndex].type === "threshold" && (
+                          <TextField
+                            label="Minimum order value ($)"
+                            type="number"
+                            value={triggerRules[editingRuleIndex].minOrderValue?.toString() || ""}
+                            onChange={(v) => updateRule(editingRuleIndex, { minOrderValue: v ? parseFloat(v) : undefined })}
+                            placeholder="No minimum"
+                            helpText="Only plant trees when order total meets this minimum"
+                            autoComplete="off"
+                          />
+                        )}
+                      </BlockStack>
+                    )}
+                  </Modal.Section>
+                </Modal>
+
+                <Divider />
+
+                {/* Impact Type */}
+                <BlockStack gap="300">
+                  <Text as="h3" variant="headingSm">Impact Type</Text>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                    {[
+                      { id: "trees", icon: "🌳", label: "Trees", price: `$${settings.costPerTree}/tree` },
+                      { id: "carbon", icon: "☁️", label: "Carbon Removal", price: `$${settings.costPerKgCo2}/kg` },
+                      { id: "both", icon: "🌍", label: "Both", price: "Combined impact" },
+                    ].map((option) => (
+                      <div
+                        key={option.id}
+                        onClick={() => updateSetting("impactType", option.id)}
+                        style={{
+                          cursor: "pointer",
+                          padding: "12px",
+                          borderRadius: "8px",
+                          border: settings.impactType === option.id ? "2px solid #2d5a27" : "2px solid #e5e5e5",
+                          background: settings.impactType === option.id ? "#f0fdf4" : "#fff",
+                          textAlign: "center",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <Text as="p" variant="bodySm" fontWeight="semibold">{option.label}</Text>
+                        <Text as="p" variant="bodySm" tone="subdued">{option.price}</Text>
+                      </div>
+                    ))}
+                  </div>
+                </BlockStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+
+        {/* Activity Feed */}
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="h2" variant="headingMd">Recent Activity</Text>
+                  <InlineStack gap="200">
+                    <ButtonGroup>
+                      {[
+                        { label: "7 days", value: "7" },
+                        { label: "30 days", value: "30" },
+                        { label: "90 days", value: "90" },
+                      ].map((p) => (
+                        <Button
+                          key={p.value}
+                          size="slim"
+                          variant={period === p.value ? "primary" : "plain"}
+                          onClick={() => setSearchParams({ period: p.value })}
+                        >
+                          {p.label}
+                        </Button>
+                      ))}
+                    </ButtonGroup>
+                    <Button url="/app" variant="primary">
+                      View Impact Report
+                    </Button>
+                  </InlineStack>
                 </InlineStack>
+                {recentActivity.length > 0 ? (
+                  <BlockStack gap="200">
+                    {recentActivity.slice(0, 10).map((item, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: "12px",
+                          background: "#fafafa",
+                          borderRadius: "8px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text as="p" variant="bodyMd">{item.description}</Text>
+                        <Text as="p" variant="bodySm" tone="subdued">{item.date}</Text>
+                      </div>
+                    ))}
+                  </BlockStack>
+                ) : (
+                  <div style={{ padding: "24px", textAlign: "center", background: "#fafafa", borderRadius: "8px" }}>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      No recent activity yet. Trees will appear here once orders are placed.
+                    </Text>
+                  </div>
+                )}
               </BlockStack>
             </Card>
           </Layout.Section>

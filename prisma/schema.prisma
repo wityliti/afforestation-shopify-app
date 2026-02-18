@@ -42,8 +42,10 @@ model ShopifySettings {
   id              String   @id @default(cuid())
   shop            String   @unique
   isEnabled       Boolean  @default(true)
-  triggerType     String   @default("fixed") // "fixed", "percentage", "threshold"
+  triggerType     String   @default("fixed") // legacy: "fixed", "per_product", "percentage", "threshold"
   triggerValue    Float    @default(1)
+  minOrderValue   Float?   @map("min_order_value")
+  triggerRules    Json?    @map("trigger_rules") // [{type,enabled,value,tag?,minOrderValue?}]
   impactType      String   @default("trees") @map("impact_type") // trees, carbon, both
   costPerTree     Float    @default(0.50) @map("cost_per_tree")
   costPerKgCo2    Float    @default(0.20) @map("cost_per_kg_co2")
