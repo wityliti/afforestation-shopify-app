@@ -1,0 +1,25 @@
+.card {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  transition: transform var(--duration-normal) var(--ease-bouncy),
+              box-shadow var(--duration-normal) var(--ease-bouncy);
+  box-shadow: var(--shadow-warm);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.sublabel {
+  margin-top: 2px;
+}
