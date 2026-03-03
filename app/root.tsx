@@ -9,6 +9,8 @@ import {
 // Flaticon UIcons - Regular Rounded style (most common)
 import "@flaticon/flaticon-uicons/css/all/all.css";
 
+import "./styles/brand-tokens.css";
+
 export default function App() {
   return (
     <html>
@@ -25,6 +27,10 @@ export default function App() {
         <link
           rel="stylesheet"
           href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
         />
         <Meta />
         <Links />
