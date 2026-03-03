@@ -25,6 +25,10 @@ import { SettingsIcon } from "@shopify/polaris-icons"
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react"
 import { authenticate, unauthenticated } from "../shopify.server"
 import prisma from "../db.server"
+import { StatCard } from "../components/StatCard"
+import { ActivityItem, ActivityEmpty } from "../components/ActivityItem"
+import { BrandBanner } from "../components/BrandBanner"
+import dashStyles from "../styles/dashboard.module.css"
 
 export interface TriggerRule {
   type: "fixed" | "per_product" | "per_tag" | "threshold" | "percentage"
@@ -359,7 +363,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }>>`
       SELECT COALESCE(SUM(trees_planted), 0) as total_trees
       FROM impact_ledger
-      WHERE source_type IN ('shopify', 'shopify_flow', 'shopify_loyalty')
+      WHERE source_type = 'shopify'
         AND source_id = ${shopRecord.id.toString()}
         AND created_at >= ${startOfMonth}
     `
@@ -552,41 +556,11 @@ export default function Index() {
       <BlockStack gap="500">
         {/* Active Rule Banner - inspired by Plant Trees app */}
         {!settings.isPaused && (
-          <div style={{
-            background: "linear-gradient(135deg, #2d5a27 0%, #3d7a37 100%)",
-            borderRadius: "12px",
-            padding: "16px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            color: "#fff",
-            boxShadow: "0 2px 8px rgba(45, 90, 39, 0.2)",
-          }}>
-            <InlineStack gap="300" blockAlign="center">
-              <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                overflow: 'hidden',
-                flexShrink: 0,
-                backgroundColor: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <img src="/logo.png" alt="Afforestation" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-              </div>
-              <div>
-                <Text as="p" variant="bodyMd" fontWeight="bold">
-                  Afforestation.org | {getActiveRuleSummary()} | Active
-                </Text>
-                <p style={{ margin: 0, fontSize: "13px", color: "rgba(255, 255, 255, 0.95)", lineHeight: 1.4 }}>
-                  Fund verified tree-planting with every order
-                </p>
-              </div>
-            </InlineStack>
-            <Badge tone="success">Active</Badge>
-          </div>
+          <BrandBanner
+            title={`Afforestation.org | ${getActiveRuleSummary()} | Active`}
+            subtitle="Fund verified tree-planting with every order"
+            isActive={true}
+          />
         )}
 
         {/* Status Banner */}
@@ -622,7 +596,7 @@ export default function Index() {
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between">
-                  <Text as="h2" variant="headingLg">Your Climate Impact <i className="fi fi-rr-earth-americas" style={{ color: "#2d5a27" }}></i></Text>
+                  <Text as="h2" variant="headingLg">Your Climate Impact <i className="fi fi-rr-earth-americas" style={{ color: "var(--brand-primary)" }}></i></Text>
                   <ButtonGroup>
                     <Button
                       onClick={handleTogglePause}
@@ -639,57 +613,28 @@ export default function Index() {
                 <Divider />
 
                 {/* Stats Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-                  <div style={{
-                    background: "#fafafa",
-                    border: "1px solid #e5e5e5",
-                    borderRadius: "12px",
-                    padding: "24px",
-                    textAlign: "center",
-                  }}>
-                    <div style={{ fontSize: "40px", marginBottom: "8px", color: "#2d5a27" }}><i className="fi fi-rr-tree"></i></div>
-                    <Text as="p" variant="heading2xl" fontWeight="bold">
-                      {impact.totalTreesPlanted.toLocaleString()}
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">Trees Planted</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      ${(impact.totalTreesPlanted * settings.costPerTree).toFixed(2)} funded
-                    </Text>
-                  </div>
-
-                  <div style={{
-                    background: "#fafafa",
-                    border: "1px solid #e5e5e5",
-                    borderRadius: "12px",
-                    padding: "24px",
-                    textAlign: "center",
-                  }}>
-                    <div style={{ fontSize: "40px", marginBottom: "8px", color: "#3b82f6" }}><i className="fi fi-rr-cloud"></i></div>
-                    <Text as="p" variant="heading2xl" fontWeight="bold">
-                      {impact.totalCo2OffsetKg.toLocaleString()}
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">kg CO₂ Offset</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      ≈ {(impact.totalCo2OffsetKg / 1000).toFixed(1)} tonnes
-                    </Text>
-                  </div>
-
-                  <div style={{
-                    background: "#fafafa",
-                    border: "1px solid #e5e5e5",
-                    borderRadius: "12px",
-                    padding: "24px",
-                    textAlign: "center",
-                  }}>
-                    <div style={{ fontSize: "40px", marginBottom: "8px", color: "#8b5cf6" }}><i className="fi fi-rr-shopping-cart"></i></div>
-                    <Text as="p" variant="heading2xl" fontWeight="bold">
-                      {impact.totalOrders.toLocaleString()}
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">Orders Contributing</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      ${estimatedCost.toFixed(2)} total impact
-                    </Text>
-                  </div>
+                <div className={dashStyles.statsGrid}>
+                  <StatCard
+                    icon="fi fi-rr-tree"
+                    iconColor="var(--brand-primary)"
+                    value={impact.totalTreesPlanted.toLocaleString()}
+                    label="Trees Planted"
+                    sublabel={`$${(impact.totalTreesPlanted * settings.costPerTree).toFixed(2)} funded`}
+                  />
+                  <StatCard
+                    icon="fi fi-rr-cloud"
+                    iconColor="var(--brand-co2-blue)"
+                    value={impact.totalCo2OffsetKg.toLocaleString()}
+                    label="kg CO₂ Offset"
+                    sublabel={`≈ ${(impact.totalCo2OffsetKg / 1000).toFixed(1)} tonnes`}
+                  />
+                  <StatCard
+                    icon="fi fi-rr-shopping-cart"
+                    iconColor="var(--brand-orders-purple)"
+                    value={impact.totalOrders.toLocaleString()}
+                    label="Orders Contributing"
+                    sublabel={`$${estimatedCost.toFixed(2)} total impact`}
+                  />
                 </div>
 
                 {/* Monthly Spending Progress */}
@@ -751,18 +696,9 @@ export default function Index() {
                   {triggerRules.map((rule, index) => (
                     <div
                       key={rule.type}
-                      style={{
-                        padding: "16px",
-                        borderRadius: "12px",
-                        border: "1px solid #e5e5e5",
-                        background: "#fafafa",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "16px",
-                      }}
+                      className={dashStyles.ruleCard}
                     >
-                      <div style={{ flex: 1 }}>
+                      <div className={dashStyles.ruleContent}>
                         <Text as="p" variant="bodyMd" fontWeight="semibold">{getRuleTitle(rule)}</Text>
                         <Text as="p" variant="bodySm" tone="subdued">{getRuleDesc(rule, index)}</Text>
                       </div>
@@ -772,29 +708,9 @@ export default function Index() {
                           tabIndex={0}
                           onClick={() => updateRule(index, { enabled: !rule.enabled })}
                           onKeyDown={(e) => e.key === "Enter" && updateRule(index, { enabled: !rule.enabled })}
-                          style={{
-                            width: "44px",
-                            height: "24px",
-                            borderRadius: "12px",
-                            background: rule.enabled ? "#2d5a27" : "#d1d5db",
-                            cursor: "pointer",
-                            position: "relative",
-                            transition: "background 0.2s",
-                          }}
+                          className={`${dashStyles.toggle} ${rule.enabled ? dashStyles.toggleEnabled : dashStyles.toggleDisabled}`}
                         >
-                          <div
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              borderRadius: "50%",
-                              background: "#fff",
-                              position: "absolute",
-                              top: "2px",
-                              left: rule.enabled ? "22px" : "2px",
-                              transition: "left 0.2s",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                            }}
-                          />
+                          <div className={`${dashStyles.toggleKnob} ${rule.enabled ? dashStyles.toggleKnobOn : dashStyles.toggleKnobOff}`} />
                         </div>
                         <Button
                           variant="plain"
@@ -882,7 +798,7 @@ export default function Index() {
                 {/* Impact Type */}
                 <BlockStack gap="300">
                   <Text as="h3" variant="headingSm">Impact Type</Text>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                  <div className={dashStyles.impactTypeGrid}>
                     {[
                       { id: "trees", icon: "🌳", label: "Trees", price: `$${settings.costPerTree}/tree` },
                       { id: "carbon", icon: "☁️", label: "Carbon Removal", price: `$${settings.costPerKgCo2}/kg` },
@@ -891,15 +807,7 @@ export default function Index() {
                       <div
                         key={option.id}
                         onClick={() => updateSetting("impactType", option.id)}
-                        style={{
-                          cursor: "pointer",
-                          padding: "12px",
-                          borderRadius: "8px",
-                          border: settings.impactType === option.id ? "2px solid #2d5a27" : "2px solid #e5e5e5",
-                          background: settings.impactType === option.id ? "#f0fdf4" : "#fff",
-                          textAlign: "center",
-                          transition: "all 0.2s",
-                        }}
+                        className={`${dashStyles.impactTypeOption} ${settings.impactType === option.id ? dashStyles.impactTypeSelected : dashStyles.impactTypeUnselected}`}
                       >
                         <Text as="p" variant="bodySm" fontWeight="semibold">{option.label}</Text>
                         <Text as="p" variant="bodySm" tone="subdued">{option.price}</Text>
@@ -944,28 +852,15 @@ export default function Index() {
                 {recentActivity.length > 0 ? (
                   <BlockStack gap="200">
                     {recentActivity.slice(0, 10).map((item, i) => (
-                      <div
+                      <ActivityItem
                         key={i}
-                        style={{
-                          padding: "12px",
-                          background: "#fafafa",
-                          borderRadius: "8px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text as="p" variant="bodyMd">{item.description}</Text>
-                        <Text as="p" variant="bodySm" tone="subdued">{item.date}</Text>
-                      </div>
+                        description={item.description}
+                        date={item.date}
+                      />
                     ))}
                   </BlockStack>
                 ) : (
-                  <div style={{ padding: "24px", textAlign: "center", background: "#fafafa", borderRadius: "8px" }}>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      No recent activity yet. Trees will appear here once orders are placed.
-                    </Text>
-                  </div>
+                  <ActivityEmpty />
                 )}
               </BlockStack>
             </Card>

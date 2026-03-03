@@ -8,11 +8,11 @@
 <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
 
 <div class="afforestation-banner" id="afforestation-banner-{{ block.id }}" style="
-  --banner-bg: {{ block.settings.background_color }};
-  --banner-text: {{ block.settings.text_color }};
-  --banner-padding: {% case block.settings.style %}{% when 'compact' %}6px 16px{% when 'bold' %}14px 24px{% else %}10px 20px{% endcase %};
-  --banner-size: {% case block.settings.style %}{% when 'bold' %}16px{% else %}14px{% endcase %};
-  --banner-weight: {% case block.settings.style %}{% when 'bold' %}600{% else %}400{% endcase %};
+  --brand-banner-bg: {{ block.settings.background_color }};
+  --brand-banner-text: {{ block.settings.text_color }};
+  --brand-banner-padding: {% case block.settings.style %}{% when 'compact' %}6px 16px{% when 'bold' %}14px 24px{% else %}10px 20px{% endcase %};
+  --brand-banner-size: {% case block.settings.style %}{% when 'bold' %}16px{% else %}14px{% endcase %};
+  --brand-banner-weight: {% case block.settings.style %}{% when 'bold' %}600{% else %}400{% endcase %};
 ">
   <div class="banner-content">
     <span class="banner-icon"><i class="fi fi-rr-{{ block.settings.icon }}"></i></span>
@@ -100,22 +100,22 @@
 
 <style>
   .afforestation-banner {
-    --banner-bg: #2d5a27;
-    --banner-text: #ffffff;
-    --banner-padding: 10px 20px;
-    --banner-size: 14px;
-    --banner-weight: 400;
+    --brand-banner-bg: #2d5a27;
+    --brand-banner-text: #ffffff;
+    --brand-banner-padding: 10px 20px;
+    --brand-banner-size: 14px;
+    --brand-banner-weight: 400;
     
     width: 100vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--banner-bg);
-    color: var(--banner-text);
-    padding: var(--banner-padding);
+    background: var(--brand-banner-bg);
+    color: var(--brand-banner-text);
+    padding: var(--brand-banner-padding);
     text-align: center;
-    font-size: var(--banner-size);
-    font-weight: var(--banner-weight);
+    font-size: var(--brand-banner-size);
+    font-weight: var(--brand-banner-weight);
     box-sizing: border-box;
   }
   
@@ -132,7 +132,7 @@
   }
   
   .afforestation-banner .banner-text {
-    color: var(--banner-text);
+    color: var(--brand-banner-text);
   }
   
   .afforestation-banner .banner-badge {

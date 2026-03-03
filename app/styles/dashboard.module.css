@@ -1,0 +1,82 @@
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.ruleCard {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--brand-border);
+  background: var(--brand-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ruleContent {
+  flex: 1;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--duration-fast) ease;
+  border: none;
+  padding: 0;
+}
+
+.toggleEnabled {
+  background: var(--brand-primary);
+}
+
+.toggleDisabled {
+  background: #d1d5db;
+}
+
+.toggleKnob {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  transition: left var(--duration-fast) ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggleKnobOn {
+  left: 22px;
+}
+
+.toggleKnobOff {
+  left: 2px;
+}
+
+.impactTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.impactTypeOption {
+  cursor: pointer;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: all var(--duration-fast) ease;
+}
+
+.impactTypeSelected {
+  border: 2px solid var(--brand-primary);
+  background: var(--brand-accent);
+}
+
+.impactTypeUnselected {
+  border: 2px solid var(--brand-border);
+  background: #fff;
+}

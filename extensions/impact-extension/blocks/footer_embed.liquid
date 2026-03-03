@@ -8,9 +8,9 @@
 
 {% if block.settings.enabled %}
 <div class="afforestation-footer-embed {{ block.settings.position }}" id="afforestation-footer-embed" style="
-  --footer-primary: {{ block.settings.primary_color }};
-  --footer-bg: {{ block.settings.background_color }};
-  --footer-border: {{ block.settings.primary_color }}33;
+  --brand-footer-primary: {{ block.settings.primary_color }};
+  --brand-footer-bg: {{ block.settings.background_color }};
+  --brand-footer-border: {{ block.settings.primary_color }}33;
 ">
   <div class="footer-badge-content">
     <div class="footer-badge-icon {% if block.settings.animate %}animate-bounce{% endif %}">
@@ -70,15 +70,15 @@
 
 <style>
   .afforestation-footer-embed {
-    --footer-primary: #2d5a27;
-    --footer-bg: #f0fdf4;
-    --footer-border: rgba(45, 90, 39, 0.2);
+    --brand-footer-primary: #2d5a27;
+    --brand-footer-bg: #f0fdf4;
+    --brand-footer-border: rgba(45, 90, 39, 0.2);
     
     position: fixed;
     bottom: 20px;
     z-index: 999;
-    background: var(--footer-bg);
-    border: 1px solid var(--footer-border);
+    background: var(--brand-footer-bg);
+    border: 1px solid var(--brand-footer-border);
     border-radius: 8px;
     padding: 8px 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -121,19 +121,19 @@
   .afforestation-footer-embed .footer-stat-value {
     font-size: 16px;
     font-weight: 700;
-    color: var(--footer-primary);
+    color: var(--brand-footer-primary);
   }
   
   .afforestation-footer-embed .footer-stat-label {
     font-size: 12px;
-    color: var(--footer-primary);
+    color: var(--brand-footer-primary);
     opacity: 0.8;
   }
   
   .afforestation-footer-embed .footer-brand {
     font-size: 10px;
     font-weight: 600;
-    color: var(--footer-primary);
+    color: var(--brand-footer-primary);
     opacity: 0.6;
   }
   
