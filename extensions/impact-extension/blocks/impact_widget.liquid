@@ -14,12 +14,12 @@
 {% assign parsed_message = message | replace: '{count}', count | replace: '{s}', plural %}
 
 <div class="afforestation-impact-widget" id="afforestation-widget-{{ block.id }}" style="
-  --widget-bg: {{ block.settings.background_color }};
-  --widget-border: {{ block.settings.border_color }};
-  --widget-text: {{ block.settings.text_color }};
-  --widget-primary: {{ block.settings.primary_color }};
-  --widget-radius: {% case block.settings.border_style %}{% when 'sharp' %}0px{% when 'pill' %}50px{% else %}8px{% endcase %};
-  --widget-font: {{ block.settings.font_family }};
+  --brand-widget-bg: {{ block.settings.background_color }};
+  --brand-widget-border: {{ block.settings.border_color }};
+  --brand-widget-text: {{ block.settings.text_color }};
+  --brand-widget-primary: {{ block.settings.primary_color }};
+  --brand-widget-radius: {% case block.settings.border_style %}{% when 'sharp' %}0px{% when 'pill' %}50px{% else %}8px{% endcase %};
+  --brand-widget-font: {{ block.settings.font_family }};
 ">
   <div class="impact-content">
     <span class="impact-icon {% if block.settings.animate %}animate-{{ block.settings.animation_type }}{% endif %}">
@@ -193,20 +193,20 @@
 
 <style>
   .afforestation-impact-widget {
-    --widget-bg: #f0fdf4;
-    --widget-border: #bbf7d0;
-    --widget-text: #14532d;
-    --widget-primary: #2d5a27;
-    --widget-radius: 8px;
-    --widget-font: inherit;
+    --brand-widget-bg: #f0fdf4;
+    --brand-widget-border: #bbf7d0;
+    --brand-widget-text: #14532d;
+    --brand-widget-primary: #2d5a27;
+    --brand-widget-radius: 8px;
+    --brand-widget-font: inherit;
     
     width: 100%;
-    background: var(--widget-bg);
-    border: 1px solid var(--widget-border);
-    border-radius: var(--widget-radius);
+    background: var(--brand-widget-bg);
+    border: 1px solid var(--brand-widget-border);
+    border-radius: var(--brand-widget-radius);
     padding: 12px 16px;
     margin: 10px 0;
-    font-family: var(--widget-font);
+    font-family: var(--brand-widget-font);
     transition: all 0.3s ease;
   }
   
@@ -219,7 +219,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--widget-text);
+    color: var(--brand-widget-text);
   }
   
   .afforestation-impact-widget .impact-icon {
@@ -237,16 +237,16 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: var(--widget-text);
+    color: var(--brand-widget-text);
     opacity: 0.8;
     padding-top: 8px;
     margin-top: 8px;
-    border-top: 1px solid var(--widget-border);
+    border-top: 1px solid var(--brand-widget-border);
   }
   
   .afforestation-impact-widget .total-icon {
     font-size: 14px;
-    color: var(--widget-primary);
+    color: var(--brand-widget-primary);
   }
   
   /* Animations */
@@ -273,8 +273,8 @@
   }
   
   @keyframes widget-glow {
-    0%, 100% { filter: drop-shadow(0 0 2px var(--widget-primary)); }
-    50% { filter: drop-shadow(0 0 8px var(--widget-primary)); }
+    0%, 100% { filter: drop-shadow(0 0 2px var(--brand-widget-primary)); }
+    50% { filter: drop-shadow(0 0 8px var(--brand-widget-primary)); }
   }
   
   @media (max-width: 480px) {

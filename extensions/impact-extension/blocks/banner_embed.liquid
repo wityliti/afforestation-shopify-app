@@ -8,8 +8,8 @@
 
 {% if block.settings.enabled %}
 <div class="afforestation-banner-embed" id="afforestation-banner-embed" style="
-  --banner-bg: {{ block.settings.background_color }};
-  --banner-text: {{ block.settings.text_color }};
+  --brand-banner-bg: {{ block.settings.background_color }};
+  --brand-banner-text: {{ block.settings.text_color }};
 ">
   <div class="banner-content">
     <span class="banner-icon"><i class="fi fi-rr-{{ block.settings.icon }}"></i></span>
@@ -24,15 +24,15 @@
 
 <style>
   .afforestation-banner-embed {
-    --banner-bg: #2d5a27;
-    --banner-text: #ffffff;
+    --brand-banner-bg: #2d5a27;
+    --brand-banner-text: #ffffff;
     
     width: 100vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--banner-bg);
-    color: var(--banner-text);
+    background: var(--brand-banner-bg);
+    color: var(--brand-banner-text);
     padding: {% if block.settings.style == 'compact' %}6px 16px{% elsif block.settings.style == 'bold' %}14px 24px{% else %}10px 20px{% endif %};
     text-align: center;
     font-size: {% if block.settings.style == 'bold' %}16px{% else %}14px{% endif %};
