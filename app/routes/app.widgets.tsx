@@ -203,7 +203,7 @@ export default function WidgetsShowcase() {
 
   const FooterWidgetPreview = () => (
     <div style={{
-      background: "#f9fafb",
+      background: "var(--brand-surface)",
       borderRadius: "var(--radius-lg)",
       padding: "16px",
       boxShadow: "var(--shadow-warm)",
@@ -212,7 +212,7 @@ export default function WidgetsShowcase() {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        borderTop: "1px solid #e5e7eb",
+        borderTop: "1px solid var(--brand-border)",
         paddingTop: "12px",
       }}>
         <div style={{ fontSize: "11px", color: "var(--brand-border)" }}>© 2026 Your Store</div>

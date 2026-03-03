@@ -596,7 +596,7 @@ export default function Index() {
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between">
-                  <Text as="h2" variant="headingLg">Your Climate Impact <i className="fi fi-rr-earth-americas" style={{ color: "#2d5a27" }}></i></Text>
+                  <Text as="h2" variant="headingLg">Your Climate Impact <i className="fi fi-rr-earth-americas" style={{ color: "var(--brand-primary)" }}></i></Text>
                   <ButtonGroup>
                     <Button
                       onClick={handleTogglePause}

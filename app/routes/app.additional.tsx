@@ -249,7 +249,7 @@ export default function WidgetCustomization() {
                     <Text as="p" variant="bodySm" tone="subdued">
                       In the Theme Editor, look for our widgets under <strong>"Apps"</strong>:
                     </Text>
-                    <ul style={{ marginTop: 8, paddingLeft: 20, fontSize: 13, color: '#6b7280' }}>
+                    <ul style={{ marginTop: 8, paddingLeft: 20, fontSize: 13, color: 'var(--brand-text-muted)' }}>
                       <li>Tree Impact Widget - for product pages</li>
                       <li>Impact Banner - announcement bar</li>
                       <li>Impact Footer Badge - floating badge</li>
