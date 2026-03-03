@@ -105,39 +105,39 @@ export default function WidgetsShowcase() {
   const ProductWidgetPreview = () => (
     <div style={{
       background: "#fff",
-      borderRadius: "12px",
+      borderRadius: "var(--radius-lg)",
       padding: "16px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      boxShadow: "var(--shadow-warm)",
       maxWidth: "280px",
     }}>
       <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
         <div style={{
           width: "60px", height: "60px",
-          background: "#f3f4f6", borderRadius: "8px",
+          background: "var(--brand-surface)", borderRadius: "var(--radius-md)",
           display: "flex", alignItems: "center", justifyContent: "center",
-        }}><i className="fi fi-rr-box-open" style={{ fontSize: "24px", color: "#6b7280" }}></i></div>
+        }}><i className="fi fi-rr-box-open" style={{ fontSize: "24px", color: "var(--brand-text-muted)" }}></i></div>
         <div>
-          <div style={{ fontSize: "11px", color: "#9ca3af" }}>Product Name</div>
+          <div style={{ fontSize: "11px", color: "var(--brand-border)" }}>Product Name</div>
           <div style={{ fontSize: "16px", fontWeight: "600" }}>$49.99</div>
         </div>
       </div>
       <div style={{
-        background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
-        border: "1px solid #bbf7d0",
-        borderRadius: "8px",
+        background: "linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-accent-medium) 100%)",
+        border: "1px solid var(--brand-accent-strong)",
+        borderRadius: "var(--radius-md)",
         padding: "10px 14px",
         display: "flex",
         alignItems: "center",
         gap: "10px",
       }}>
-        <span style={{ fontSize: "22px", color: "#2d5a27" }}><i className="fi fi-rr-tree"></i></span>
-        <span style={{ color: "#14532d", fontSize: "13px" }}>
+        <span style={{ fontSize: "22px", color: "var(--brand-primary)" }}><i className="fi fi-rr-tree"></i></span>
+        <span style={{ color: "var(--brand-text-dark)", fontSize: "13px" }}>
           This purchase plants <strong>1 tree</strong>!
         </span>
       </div>
       <div style={{
         background: "#111", color: "#fff",
-        padding: "10px", borderRadius: "6px",
+        padding: "10px", borderRadius: "var(--radius-sm)",
         marginTop: "12px", textAlign: "center",
         fontSize: "13px",
       }}>Add to Cart</div>
@@ -145,9 +145,9 @@ export default function WidgetsShowcase() {
   )
 
   const BannerWidgetPreview = () => (
-    <div style={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+    <div style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-warm)" }}>
       <div style={{
-        background: "linear-gradient(90deg, #15803d 0%, #16a34a 100%)",
+        background: "linear-gradient(90deg, var(--brand-emerald-700) 0%, var(--brand-emerald-600) 100%)",
         color: "#fff",
         padding: "10px 20px",
         display: "flex",
@@ -166,36 +166,36 @@ export default function WidgetsShowcase() {
         }}>Afforestation</span>
       </div>
       <div style={{ background: "#fff", padding: "16px", textAlign: "center" }}>
-        <div style={{ fontSize: "11px", color: "#9ca3af" }}>Your store header...</div>
+        <div style={{ fontSize: "11px", color: "var(--brand-border)" }}>Your store header...</div>
       </div>
     </div>
   )
 
   const ForestWidgetPreview = () => (
     <div style={{
-      background: "linear-gradient(180deg, #f0fdf4 0%, #fff 100%)",
-      borderRadius: "12px",
+      background: "linear-gradient(180deg, var(--brand-accent) 0%, #fff 100%)",
+      borderRadius: "var(--radius-lg)",
       padding: "20px",
       textAlign: "center",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      boxShadow: "var(--shadow-warm)",
     }}>
-      <div style={{ fontSize: "16px", fontWeight: "600", color: "#15803d" }}>Our Virtual Forest</div>
-      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "16px" }}>
+      <div style={{ fontSize: "16px", fontWeight: "600", color: "var(--brand-emerald-700)" }}>Our Virtual Forest</div>
+      <div style={{ fontSize: "12px", color: "var(--brand-text-muted)", marginBottom: "16px" }}>
         Watch our forest grow with every purchase
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginBottom: "16px" }}>
         <div>
-          <div style={{ fontSize: "22px", fontWeight: "700", color: "#16a34a" }}>{stats.trees || 127}</div>
-          <div style={{ fontSize: "11px", color: "#6b7280" }}><i className="fi fi-rr-tree" style={{ marginRight: "4px" }}></i>Trees</div>
+          <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--brand-emerald-600)" }}>{stats.trees || 127}</div>
+          <div style={{ fontSize: "11px", color: "var(--brand-text-muted)" }}><i className="fi fi-rr-tree" style={{ marginRight: "4px" }}></i>Trees</div>
         </div>
         <div>
-          <div style={{ fontSize: "22px", fontWeight: "700", color: "#0ea5e9" }}>{stats.co2 || 3048}</div>
-          <div style={{ fontSize: "11px", color: "#6b7280" }}><i className="fi fi-rr-cloud" style={{ marginRight: "4px" }}></i>kg CO₂</div>
+          <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--brand-co2-blue)" }}>{stats.co2 || 3048}</div>
+          <div style={{ fontSize: "11px", color: "var(--brand-text-muted)" }}><i className="fi fi-rr-cloud" style={{ marginRight: "4px" }}></i>kg CO₂</div>
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
         {[1, 2, 3, 4, 5, 6].map((_, i) => (
-          <i key={i} className={`fi fi-rr-${i % 2 === 0 ? 'tree' : 'leaf'}`} style={{ fontSize: "20px", color: i % 2 === 0 ? "#16a34a" : "#22c55e" }}></i>
+          <i key={i} className={`fi fi-rr-${i % 2 === 0 ? 'tree' : 'leaf'}`} style={{ fontSize: "20px", color: i % 2 === 0 ? "var(--brand-emerald-600)" : "var(--brand-emerald-500)" }}></i>
         ))}
       </div>
     </div>
@@ -204,9 +204,9 @@ export default function WidgetsShowcase() {
   const FooterWidgetPreview = () => (
     <div style={{
       background: "#f9fafb",
-      borderRadius: "12px",
+      borderRadius: "var(--radius-lg)",
       padding: "16px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      boxShadow: "var(--shadow-warm)",
     }}>
       <div style={{
         display: "flex",
@@ -215,19 +215,19 @@ export default function WidgetsShowcase() {
         borderTop: "1px solid #e5e7eb",
         paddingTop: "12px",
       }}>
-        <div style={{ fontSize: "11px", color: "#9ca3af" }}>© 2026 Your Store</div>
+        <div style={{ fontSize: "11px", color: "var(--brand-border)" }}>© 2026 Your Store</div>
         <div style={{
-          background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
-          border: "1px solid #bbf7d0",
-          borderRadius: "6px",
+          background: "linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-accent-medium) 100%)",
+          border: "1px solid var(--brand-accent-strong)",
+          borderRadius: "var(--radius-sm)",
           padding: "6px 12px",
           display: "flex",
           alignItems: "center",
           gap: "8px",
         }}>
-          <span style={{ fontSize: "16px", color: "#15803d" }}><i className="fi fi-rr-tree"></i></span>
-          <span style={{ fontWeight: "600", color: "#15803d", fontSize: "14px" }}>{stats.trees || 127}</span>
-          <span style={{ fontSize: "11px", color: "#6b7280" }}>trees</span>
+          <span style={{ fontSize: "16px", color: "var(--brand-emerald-700)" }}><i className="fi fi-rr-tree"></i></span>
+          <span style={{ fontWeight: "600", color: "var(--brand-emerald-700)", fontSize: "14px" }}>{stats.trees || 127}</span>
+          <span style={{ fontSize: "11px", color: "var(--brand-text-muted)" }}>trees</span>
         </div>
       </div>
     </div>
@@ -342,12 +342,12 @@ export default function WidgetsShowcase() {
                 <BlockStack gap="200" inlineAlign="center">
                   <div style={{
                     width: "48px", height: "48px",
-                    background: "#f0fdf4",
+                    background: "var(--brand-accent)",
                     borderRadius: "50%",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
-                    border: "2px solid #bbf7d0",
-                    color: "#16a34a",
+                    border: "2px solid var(--brand-accent-strong)",
+                    color: "var(--brand-emerald-600)",
                   }}><i className="fi fi-rr-palette"></i></div>
                   <Text as="p" variant="headingSm">Open Theme Editor</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
@@ -359,12 +359,12 @@ export default function WidgetsShowcase() {
                 <BlockStack gap="200" inlineAlign="center">
                   <div style={{
                     width: "48px", height: "48px",
-                    background: "#f0fdf4",
+                    background: "var(--brand-accent)",
                     borderRadius: "50%",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
-                    border: "2px solid #bbf7d0",
-                    color: "#16a34a",
+                    border: "2px solid var(--brand-accent-strong)",
+                    color: "var(--brand-emerald-600)",
                   }}><i className="fi fi-rr-apps-add"></i></div>
                   <Text as="p" variant="headingSm">Add App Block</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
@@ -376,12 +376,12 @@ export default function WidgetsShowcase() {
                 <BlockStack gap="200" inlineAlign="center">
                   <div style={{
                     width: "48px", height: "48px",
-                    background: "#f0fdf4",
+                    background: "var(--brand-accent)",
                     borderRadius: "50%",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "24px",
-                    border: "2px solid #bbf7d0",
-                    color: "#16a34a",
+                    border: "2px solid var(--brand-accent-strong)",
+                    color: "var(--brand-emerald-600)",
                   }}><i className="fi fi-rr-check"></i></div>
                   <Text as="p" variant="headingSm">Save & Done</Text>
                   <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
@@ -463,7 +463,7 @@ export default function WidgetsShowcase() {
                 ].map((step, i) => (
                   <InlineStack key={i} gap="200" blockAlign="start">
                     <div style={{
-                      background: "#16a34a",
+                      background: "var(--brand-emerald-600)",
                       color: "#fff",
                       width: "20px", height: "20px",
                       borderRadius: "50%",
