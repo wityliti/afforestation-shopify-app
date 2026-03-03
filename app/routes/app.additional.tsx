@@ -279,10 +279,10 @@ export default function WidgetCustomization() {
                   style={{
                     cursor: "pointer",
                     padding: "20px",
-                    borderRadius: "12px",
-                    border: currentPreset === key ? `2px solid ${preset.colors.primary}` : "2px solid #e5e5e5",
+                    borderRadius: "var(--radius-lg)",
+                    border: currentPreset === key ? `2px solid ${preset.colors.primary}` : "2px solid var(--brand-border)",
                     background: preset.colors.background,
-                    transition: "all 0.2s",
+                    transition: "all var(--duration-fast) ease",
                     position: "relative",
                   }}
                 >
