@@ -363,7 +363,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }>>`
       SELECT COALESCE(SUM(trees_planted), 0) as total_trees
       FROM impact_ledger
-      WHERE source_type IN ('shopify', 'shopify_flow', 'shopify_loyalty')
+      WHERE source_type = 'shopify'
         AND source_id = ${shopRecord.id.toString()}
         AND created_at >= ${startOfMonth}
     `

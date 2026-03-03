@@ -125,8 +125,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (shopRecord) {
       await prisma.$executeRaw`
-        INSERT INTO impact_ledger (source_type, source_id, trees_planted, co2_offset_kg, notes, created_at)
-        VALUES ('shopify_loyalty', ${shopRecord.id.toString()}, ${treesPlanted}, ${treesPlanted * 24}, ${`Loyalty redemption: ${pointsSpent} points from ${loyaltyApp}`}, NOW())
+        INSERT INTO impact_ledger (source_type, source_id, trees_planted, co2_offset_kg, reference_type, metadata)
+        VALUES ('shopify', ${shopRecord.id.toString()}, ${treesPlanted}, ${treesPlanted * 24}, 'loyalty', ${JSON.stringify({ action: 'loyalty_redemption', points_spent: pointsSpent, loyalty_app: loyaltyApp })}::jsonb)
       `
     }
   } catch (error) {

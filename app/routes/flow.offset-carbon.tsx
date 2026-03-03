@@ -94,8 +94,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       if (shopRecord) {
         await prisma.$executeRaw`
-          INSERT INTO impact_ledger (source_type, source_id, trees_planted, co2_offset_kg, notes, created_at)
-          VALUES ('shopify_flow', ${shopRecord.id.toString()}, 0, ${kgCo2}, ${`Flow carbon offset: ${reason}`}, NOW())
+          INSERT INTO impact_ledger (source_type, source_id, trees_planted, co2_offset_kg, reference_type, metadata)
+          VALUES ('shopify', ${shopRecord.id.toString()}, 0, ${kgCo2}, 'flow', ${JSON.stringify({ action: 'offset_carbon', reason })}::jsonb)
         `
       }
     } catch (error) {
