@@ -221,7 +221,7 @@ export default function LinkAccount() {
             <Card>
               <BlockStack gap="400">
                 <InlineStack gap="200" align="start">
-                  <div style={{ color: '#2d5a27' }}>
+                  <div style={{ color: 'var(--brand-primary)' }}>
                     <Icon source={CheckCircleIcon} />
                   </div>
                   <Text as="h2" variant="headingMd">
